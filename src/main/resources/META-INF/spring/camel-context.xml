@@ -1,0 +1,67 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xsi:schemaLocation="
+         http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+    <camel:sslContextParameters id="sslContextParametersWithoutAuthentication">
+        <camel:keyManagers keyPassword="redhat">
+            <camel:keyStore type="JKS" resource="${location.keystore}keystore.jks" password="redhat" />
+        </camel:keyManagers>
+        <camel:trustManagers>
+            <camel:keyStore type="JKS" resource="${location.keystore}keystore.jks" password="redhat" />
+        </camel:trustManagers>
+    </camel:sslContextParameters>
+
+    <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository" />
+
+    <camelContext xmlns="http://camel.apache.org/schema/spring">
+        <route id="orderHttpsPost">
+            <from uri="restlet:https://localhost:8081/orders?restletMethod=post&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
+            <convertBodyTo type="java.lang.String" />
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Order" />
+            </unmarshal>
+            <to uri="direct:new-order"/>
+        </route>
+
+        <route id="orderHttpsGet">
+            <from uri="restlet:https://localhost:8081/orders/{orderId}?restletMethod=get&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
+            <to uri="direct:find-order"/>
+        </route>
+
+        <route id="new-order">
+            <from uri="direct:new-order" />
+            <to uri="bean:orderRepository?method=create" />
+            <setHeader headerName="CamelHttpResponseCode">
+                <constant>201</constant>
+            </setHeader>
+            <setHeader headerName="Location">
+                <simple>/orders/${body.id}</simple>
+            </setHeader>
+            <setBody>
+                <constant>null</constant>
+            </setBody>
+        </route>
+
+        <route id="find-order">
+            <from uri="direct:find-order" />
+            <setProperty propertyName="orderId">
+                <simple>${header.orderId}</simple>
+            </setProperty>
+            <to uri="bean:orderRepository?method=get" />
+            <choice>
+                <when>
+                    <simple>${body} == null</simple>
+                    <setHeader headerName="CamelHttpResponseCode">
+                        <constant>404</constant>
+                    </setHeader>
+                </when>
+            </choice>
+            <marshal><json library="Jackson" /></marshal>
+        </route>
+
+    </camelContext>
+
+</beans>
