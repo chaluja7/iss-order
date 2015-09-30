@@ -1,8 +1,10 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:cxf="http://camel.apache.org/schema/cxf"
        xsi:schemaLocation="
          http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
          http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
 
     <camel:sslContextParameters id="sslContextParametersWithoutAuthentication">
@@ -47,21 +49,47 @@
 
         <route id="find-order">
             <from uri="direct:find-order" />
+            <onException>
+                <exception>cz.cvut.iss.exception.NoSuchOrderException</exception>
+                <handled>
+                    <constant>true</constant>
+                </handled>
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>404</constant>
+                </setHeader>
+                <setBody>
+                    <constant>null</constant>
+                </setBody>
+            </onException>
             <setProperty propertyName="orderId">
                 <simple>${header.orderId}</simple>
             </setProperty>
             <to uri="bean:orderRepository?method=get" />
-            <choice>
-                <when>
-                    <simple>${body} == null</simple>
-                    <setHeader headerName="CamelHttpResponseCode">
-                        <constant>404</constant>
-                    </setHeader>
-                </when>
-            </choice>
             <marshal><json library="Jackson" /></marshal>
         </route>
 
+        <route id="soap-find-order">
+            <from uri="direct:soap-find-order" />
+            <setProperty propertyName="orderId">
+                <simple>${header.orderId}</simple>
+            </setProperty>
+            <to uri="bean:orderRepository?method=get" />
+        </route>
+
+        <route>
+            <from uri="cxf:bean:order-ws"/>
+            <setHeader headerName="orderId">
+                <simple>${body[0]}</simple>
+            </setHeader>
+            <to uri="direct:soap-find-order" />
+        </route>
+
     </camelContext>
+
+    <cxf:cxfEndpoint id="order-ws" address="http://localhost:8083/orderApplication/order"
+                     serviceClass="cz.cvut.iss.service.OrderService"
+                     endpointName="ws:OrderServicePort"
+                     serviceName="ws:OrderService"
+                     xmlns:ws="http://cz.cvut.order.endpoint"/>
 
 </beans>

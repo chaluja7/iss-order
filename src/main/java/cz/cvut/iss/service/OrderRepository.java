@@ -1,5 +1,6 @@
 package cz.cvut.iss.service;
 
+import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
 import org.apache.camel.ExchangeProperty;
 
@@ -7,18 +8,22 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class OrderRepository {
+public final class OrderRepository implements OrderService {
 
     private static final Map<Long, Order> ORDERS = new TreeMap<>();
     private static AtomicLong atomicLong = new AtomicLong(0);
 
-    public static void create(Order order) {
+    public void create(Order order) {
         order.setId(atomicLong.incrementAndGet());
         ORDERS.put(order.getId(), order);
     }
 
-    public static Order get(@ExchangeProperty("orderId") long id) {
-        return ORDERS.get(id);
+    public Order get(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+        if(ORDERS.containsKey(id)) {
+            return ORDERS.get(id);
+        }
+
+        throw new NoSuchOrderException(id);
     }
 
     public static void clear() {
