@@ -1,17 +1,23 @@
 package cz.cvut.iss.model;
 
+import javax.xml.bind.annotation.*;
 import java.util.List;
 
 /**
  * @author jakubchalupa
  * @since 28.09.15
  */
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlRootElement
 public class Order {
 
+    @XmlTransient
     private Long id;
 
+    @XmlElement(required = true)
     private Address address;
 
+    @XmlElement(required = true)
     private List<OrderItem> items;
 
     public Long getId() {

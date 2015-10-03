@@ -1,15 +1,23 @@
 package cz.cvut.iss.model;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+
 /**
  * @author jakubchalupa
  * @since 28.09.15
  */
+@XmlAccessorType(XmlAccessType.FIELD)
 public class OrderItem {
 
+    @XmlElement(required = true)
     private Long articleId;
 
+    @XmlElement(required = true)
     private Integer count;
 
+    @XmlElement(required = true)
     private Double unitPrice;
 
     public Long getArticleId() {

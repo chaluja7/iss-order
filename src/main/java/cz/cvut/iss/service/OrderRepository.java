@@ -13,11 +13,15 @@ public final class OrderRepository implements OrderService {
     private static final Map<Long, Order> ORDERS = new TreeMap<>();
     private static AtomicLong atomicLong = new AtomicLong(0);
 
-    public void create(Order order) {
+    @Override
+    public long create(Order order) {
         order.setId(atomicLong.incrementAndGet());
         ORDERS.put(order.getId(), order);
+
+        return order.getId();
     }
 
+    @Override
     public Order get(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
         if(ORDERS.containsKey(id)) {
             return ORDERS.get(id);
