@@ -71,5 +71,5 @@
     
 ###SOAP###
 
-* WSDL na adrese: ``https://localhost:8181/orderApplication/order?wsdl``
+* WSDL na adrese: ``https://localhost:9181/orderApplication/order?wsdl``
 * Např. přes SOAP-UI (http://www.soapui.org/) vytvořit nový projekt, naimportovat WDSL a nechat si vygenerovat dotazy (create a get)
