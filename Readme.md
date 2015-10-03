@@ -19,7 +19,9 @@
 * nainstalujeme features
 
   ``features:install camel-http4``
+  
   ``features:install camel-jackson``
+  
   ``features:install camel-restlet``
 
 * přidáme iss-order jako bundle
