@@ -43,4 +43,15 @@ public class Order {
     public void setItems(List<OrderItem> items) {
         this.items = items;
     }
+
+    public boolean isValid() {
+        if(address == null || !address.isValid() || items == null || items.isEmpty()) return false;
+
+        for (OrderItem item : items) {
+            if(!item.isValid()) return false;
+        }
+
+        return true;
+    }
+
 }

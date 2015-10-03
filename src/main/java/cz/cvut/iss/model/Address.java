@@ -65,4 +65,9 @@ public class Address {
     public void setZipCode(String zipCode) {
         this.zipCode = zipCode;
     }
+
+    public boolean isValid() {
+        return firstName != null && lastName != null && street != null && city != null && zipCode != null
+            && firstName.length() > 0 && lastName.length() > 0 && street.length() > 0 && city.length() > 0 && zipCode.length() > 0;
+    }
 }

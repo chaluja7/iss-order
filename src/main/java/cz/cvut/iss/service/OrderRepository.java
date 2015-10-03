@@ -1,5 +1,6 @@
 package cz.cvut.iss.service;
 
+import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
 import org.apache.camel.ExchangeProperty;
@@ -14,7 +15,11 @@ public final class OrderRepository implements OrderService {
     private static AtomicLong atomicLong = new AtomicLong(0);
 
     @Override
-    public long create(Order order) {
+    public long create(Order order) throws BadOrderBodyException{
+        if(order == null || !order.isValid()) {
+            throw new BadOrderBodyException(order);
+        }
+
         order.setId(atomicLong.incrementAndGet());
         ORDERS.put(order.getId(), order);
 

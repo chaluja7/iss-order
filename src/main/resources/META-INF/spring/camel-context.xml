@@ -22,6 +22,21 @@
     <camelContext xmlns="http://camel.apache.org/schema/spring">
         <route id="orderHttpsPost">
             <from uri="restlet:https://localhost:8081/orders?restletMethod=post&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
+
+            <onException>
+                <exception>java.io.IOException</exception>
+                <exception>org.apache.camel.InvalidPayloadException</exception>
+                <handled>
+                    <constant>true</constant>
+                </handled>
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>400</constant>
+                </setHeader>
+                <setBody>
+                    <constant>null</constant>
+                </setBody>
+            </onException>
+
             <convertBodyTo type="java.lang.String" />
             <unmarshal>
                 <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Order" />
@@ -36,6 +51,20 @@
 
         <route id="new-order">
             <from uri="direct:new-order" />
+
+            <onException>
+                <exception>cz.cvut.iss.exception.BadOrderBodyException</exception>
+                <handled>
+                    <constant>true</constant>
+                </handled>
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>400</constant>
+                </setHeader>
+                <setBody>
+                    <constant>null</constant>
+                </setBody>
+            </onException>
+
             <to uri="bean:orderRepository?method=create" />
             <setHeader headerName="CamelHttpResponseCode">
                 <constant>201</constant>

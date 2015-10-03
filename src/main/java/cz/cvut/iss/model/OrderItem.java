@@ -43,4 +43,8 @@ public class OrderItem {
     public void setUnitPrice(Double unitPrice) {
         this.unitPrice = unitPrice;
     }
+
+    public boolean isValid() {
+        return articleId != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
+    }
 }

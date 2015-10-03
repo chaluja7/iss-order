@@ -1,5 +1,6 @@
 package cz.cvut.iss.service;
 
+import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
 
@@ -20,7 +21,7 @@ public interface OrderService {
 
     @WebMethod(operationName = "create")
     @WebResult(name = "orderId")
-    long create(@WebParam(name = "order") @XmlElement(required = true, nillable = false) Order order);
+    long create(@WebParam(name = "order") @XmlElement(required = true, nillable = false) Order order) throws BadOrderBodyException;
 
     @WebMethod(operationName = "get")
     @WebResult(name = "order")
