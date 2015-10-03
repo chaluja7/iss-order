@@ -131,14 +131,14 @@
 
         <!-- brigeEndpoint na soap sluzbu objednavka s vyuzitim sslContextParametersWithoutAuthentication -->
         <route id="ssl-soap-bridge">
-            <from uri="jetty:https://localhost:8181/orderApplication?sslContextParametersRef=#sslContextParametersWithoutAuthentication&amp;matchOnUriPrefix=true"/>
-            <to uri="http://localhost:8083/orderApplication?bridgeEndpoint=true&amp;throwExceptionOnFailure=false"/>
+            <from uri="jetty:https://localhost:9181/orderApplication?sslContextParametersRef=#sslContextParametersWithoutAuthentication&amp;matchOnUriPrefix=true"/>
+            <to uri="http://localhost:9083/orderApplication?bridgeEndpoint=true&amp;throwExceptionOnFailure=false"/>
         </route>
 
     </camelContext>
 
-    <cxf:cxfEndpoint id="order-ws" address="http://localhost:8083/orderApplication/order"
-                     publishedEndpointUrl="https://localhost:8181/orderApplication/order"
+    <cxf:cxfEndpoint id="order-ws" address="http://localhost:9083/orderApplication/order"
+                     publishedEndpointUrl="https://localhost:9181/orderApplication/order"
                      serviceClass="cz.cvut.iss.service.OrderService"
                      endpointName="ws:OrderServicePort"
                      serviceName="ws:OrderService"
