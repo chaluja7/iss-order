@@ -18,6 +18,7 @@
     </camel:sslContextParameters>
 
     <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository" />
+    <bean id="exchangeProcessor" class="cz.cvut.iss.processor.ExchangeProcessor" />
 
     <camelContext xmlns="http://camel.apache.org/schema/spring">
         <route id="orderHttpsPost">
@@ -51,10 +52,8 @@
 
         <route id="new-order">
             <from uri="direct:new-order" />
-            <!-- Hack! Nepodařilo se mi číst value jakéhokoliv jiného headeru než Content-Type.. Můžete zkusit, pokud vám to půjde, APIMAN
-             bude posílat ještě VIP: true/false header.. Dostupné je to pak přes ${property.VIP}-->
-            <camel:setProperty propertyName="VIP"><camel:simple>${header.Content-Type}</camel:simple></camel:setProperty>
-            <log message="VIP: ${property.VIP}"/>
+            <bean ref="exchangeProcessor" method="handleVipHeader"/>
+            <log message="VIP: ${header.X-Els-Vip}"/>
             <onException>
                 <exception>cz.cvut.iss.exception.BadOrderBodyException</exception>
                 <handled>
