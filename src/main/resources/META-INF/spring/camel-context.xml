@@ -18,6 +18,9 @@
     </camel:sslContextParameters>
 
     <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository" />
+    <bean id="orderStatusProvider" class="cz.cvut.iss.service.OrderStatusProvider">
+        <property name="orderRepository" ref="orderRepository" />
+    </bean>
     <bean id="exchangeProcessor" class="cz.cvut.iss.processor.ExchangeProcessor" />
 
     <camelContext xmlns="http://camel.apache.org/schema/spring">
@@ -68,6 +71,10 @@
             </onException>
 
             <to uri="bean:orderRepository?method=create" />
+            <setProperty propertyName="orderId">
+                <simple>${body}</simple>
+            </setProperty>
+            <to uri="bean:orderStatusProvider?method=inProcess" />
             <setHeader headerName="CamelHttpResponseCode">
                 <constant>201</constant>
             </setHeader>
@@ -111,6 +118,10 @@
         <route id="soap-new-order">
             <from uri="direct:soap-new-order" />
             <to uri="bean:orderRepository?method=create" />
+            <setProperty propertyName="orderId">
+                <simple>${body}</simple>
+            </setProperty>
+            <to uri="bean:orderStatusProvider?method=inProcess" />
         </route>
 
         <route id="cxf-order-ws">

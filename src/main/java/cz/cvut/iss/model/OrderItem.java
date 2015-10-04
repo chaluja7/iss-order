@@ -15,6 +15,9 @@ public class OrderItem {
     private Long articleId;
 
     @XmlElement(required = true)
+    private String sku;
+
+    @XmlElement(required = true)
     private Integer count;
 
     @XmlElement(required = true)
@@ -26,6 +29,14 @@ public class OrderItem {
 
     public void setArticleId(Long articleId) {
         this.articleId = articleId;
+    }
+
+    public String getSku() {
+        return sku;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
     }
 
     public Integer getCount() {

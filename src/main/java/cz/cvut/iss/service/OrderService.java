@@ -3,6 +3,7 @@ package cz.cvut.iss.service;
 import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
+import cz.cvut.iss.model.ResolvedOrder;
 
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
@@ -25,6 +26,6 @@ public interface OrderService {
 
     @WebMethod(operationName = "get")
     @WebResult(name = "order")
-    Order get(@WebParam(name = "orderId") long orderId) throws NoSuchOrderException;
+    ResolvedOrder get(@WebParam(name = "orderId") long orderId) throws NoSuchOrderException;
 
 }
