@@ -51,7 +51,10 @@
 
         <route id="new-order">
             <from uri="direct:new-order" />
-
+            <!-- Hack! Nepodařilo se mi číst value jakéhokoliv jiného headeru než Content-Type.. Můžete zkusit, pokud vám to půjde, APIMAN
+             bude posílat ještě VIP: true/false header.. Dostupné je to pak přes ${property.VIP}-->
+            <camel:setProperty propertyName="VIP"><camel:simple>${header.Content-Type}</camel:simple></camel:setProperty>
+            <log message="VIP: ${property.VIP}"/>
             <onException>
                 <exception>cz.cvut.iss.exception.BadOrderBodyException</exception>
                 <handled>
