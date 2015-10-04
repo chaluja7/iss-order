@@ -74,4 +74,25 @@
 * WSDL na adrese: ``https://localhost:8181/orderApplication/order?wsdl``
 * Např. přes SOAP-UI (http://www.soapui.org/) vytvořit nový projekt, naimportovat WDSL a nechat si vygenerovat dotazy (create a get)
 
+###Fabric - AMQ###
+* nastartuje fabric ve fuse: 
+
+  ``fabric:create``
+  
+  mozna bude potreba:
+  
+  ``fabric:profile-edit --feature camel-http4/0.0.0 root``
+  
+  ``fabric:profile-edit --feature camel-jackson/0.0.0 root``
+  
+  ``fabric:profile-edit --feature camel-restlet/0.0.0 root``
+* vytvori 2 containery v MasterSlave topologii s persistentnim ulozistem ve slozce '/persistent-storage' a skupinou 'masterslave':
+
+  ``mq-create --create-container broker --replicas 2 --data /persistent-storage --group masterslave hq-broker``
+* vytvori consumera z example-mq-consumer:
+
+  ``container-create-child --profile mq-client-masterslave --profile example-mq-consumer root consumer``
+* v hawtio: Wiki / profiles / example / mq / consumer - zmenit destination na:
+
+  ``destination=queue://expedition``
 
