@@ -1,4 +1,5 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:osgi="http://www.springframework.org/schema/osgi"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:camel="http://camel.apache.org/schema/spring"
        xmlns:cxf="http://camel.apache.org/schema/cxf"
@@ -6,7 +7,10 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
          http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
          http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
-         http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd">
+         http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd
+         http://www.springframework.org/schema/osgi
+         http://www.springframework.org/schema/osgi/spring-osgi-1.2.xsd
+         ">
 
     <camel:sslContextParameters id="sslContextParametersWithoutAuthentication">
         <camel:keyManagers keyPassword="redhat">
@@ -75,6 +79,9 @@
             <setBody>
                 <constant>null</constant>
             </setBody>
+
+            <to uri="jmstx:queue:masterslave" />
+
         </route>
 
         <route id="find-order">
@@ -144,6 +151,7 @@
                      serviceName="ws:OrderService"
                      xmlns:ws="http://cz.cvut.order.endpoint"/>
 
+
     <!--Mozne nastaveni pouziti ssl primo na cxf endpoint, bez bridgeEndpointu-->
     <!--<http:conduit name="{http://www.company.com/product/orderApplication/service/1}OrderApplication.http-conduit">-->
         <!--<http:tlsClientParameters disableCNCheck="true">-->
@@ -159,5 +167,66 @@
             <!--</sec:cipherSuitesFilter>-->
         <!--</http:tlsClientParameters>-->
     <!--</http:conduit>-->
+
+    <!-- XA transakce -->
+
+    <!--
+        OSGi TM Service
+    -->
+    <!-- access through Spring's PlatformTransactionManager -->
+    <osgi:service id="osgiPlatformTransactionManager"
+               interface="org.springframework.transaction.PlatformTransactionManager"/>
+
+    <!-- access through PlatformTransactionManager -->
+    <osgi:service id="osgiJtaTransactionManager"
+               interface="javax.transaction.TransactionManager"/>
+
+    <!--
+        JMS TX endpoint configuration
+    -->
+    <bean id="jmstx"
+          class="org.apache.activemq.camel.component.ActiveMQComponent">
+        <property name="configuration" ref="jmsTxConfig" />
+    </bean>
+
+    <bean id="jmsTxConfig"
+          class="org.apache.camel.component.jms.JmsConfiguration">
+        <property name="connectionFactory" ref="jmsXaPoolConnectionFactory"/>
+        <property name="transactionManager" ref="osgiPlatformTransactionManager"/>
+        <property name="transacted" value="false"/>
+        <property name="cacheLevelName" value="CACHE_CONNECTION"/>
+    </bean>
+
+    <!-- connection factory wrapper to support auto-enlisting of XA resource -->
+    <bean id="jmsXaPoolConnectionFactory"
+          class="org.apache.activemq.pool.JcaPooledConnectionFactory">
+        <property name="name" value="MyXaResourceName" />
+        <property name="maxConnections" value="1" />
+        <property name="connectionFactory" ref="jmsXaConnectionFactory" />
+        <property name="transactionManager" ref="osgiJtaTransactionManager" />
+    </bean>
+
+    <bean id="jmsXaConnectionFactory"
+          class="org.apache.activemq.ActiveMQXAConnectionFactory">
+        <property name="brokerURL" value="discovery:(fabric:masterslave)"/>
+        <property name="userName" value="admin"/>
+        <property name="password" value="admin"/>
+        <property name="redeliveryPolicy">
+            <bean class="org.apache.activemq.RedeliveryPolicy">
+                <property name="maximumRedeliveries" value="0"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!--
+        ActiveMQ XA Resource Manager
+    -->
+    <bean id="resourceManager"
+          class="org.apache.activemq.pool.ActiveMQResourceManager"
+          init-method="recoverResource">
+        <property name="transactionManager" ref="osgiJtaTransactionManager" />
+        <property name="connectionFactory" ref="jmsXaPoolConnectionFactory" />
+        <property name="resourceName" value="activemq.default" />
+    </bean>
 
 </beans>

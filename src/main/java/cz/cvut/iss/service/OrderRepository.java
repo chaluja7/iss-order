@@ -26,7 +26,7 @@ public final class OrderRepository implements OrderService {
         order.setId(atomicLong.incrementAndGet());
         ORDERS.put(order.getId(), order);
 
-        sendOrderToExpedition(order);
+//        sendOrderToExpedition(order);
 
         return order.getId();
     }
