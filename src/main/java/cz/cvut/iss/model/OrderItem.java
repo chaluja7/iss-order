@@ -12,7 +12,7 @@ import javax.xml.bind.annotation.XmlElement;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class OrderItem {
+public class OrderItem implements Cloneable<OrderItem> {
 
     @XmlElement(required = true)
     private Long articleId;
@@ -60,5 +60,16 @@ public class OrderItem {
 
     public boolean isValid() {
         return articleId != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
+    }
+
+    @Override
+    public OrderItem getClone() {
+        OrderItem orderItem = new OrderItem();
+        orderItem.setSku(this.getSku());
+        orderItem.setArticleId(this.getArticleId());
+        orderItem.setCount(this.getCount());
+        orderItem.setUnitPrice(this.getUnitPrice());
+
+        return orderItem;
     }
 }

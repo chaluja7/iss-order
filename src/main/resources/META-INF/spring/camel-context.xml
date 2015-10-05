@@ -3,10 +3,13 @@
        xmlns:camel="http://camel.apache.org/schema/spring"
        xmlns:cxf="http://camel.apache.org/schema/cxf"
        xmlns:http="http://cxf.apache.org/transports/http/configuration"
+       xmlns:sec="http://cxf.apache.org/configuration/security"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
          http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
          http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
-         http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd">
+         http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd
+         http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd
+         http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd">
 
     <camel:sslContextParameters id="sslContextParametersWithoutAuthentication">
         <camel:keyManagers keyPassword="redhat">
@@ -19,6 +22,12 @@
 
     <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository" />
     <bean id="orderStatusProvider" class="cz.cvut.iss.service.OrderStatusProvider">
+        <property name="orderRepository" ref="orderRepository" />
+    </bean>
+    <bean id="supplierAService" class="cz.cvut.iss.service.SupplierAService">
+        <property name="orderRepository" ref="orderRepository" />
+    </bean>
+    <bean id="supplierBService" class="cz.cvut.iss.service.SupplierBService">
         <property name="orderRepository" ref="orderRepository" />
     </bean>
     <bean id="exchangeProcessor" class="cz.cvut.iss.processor.ExchangeProcessor" />
@@ -74,21 +83,67 @@
             <setProperty propertyName="orderId">
                 <simple>${body}</simple>
             </setProperty>
-            <to uri="bean:orderStatusProvider?method=inProcess"/>
-            <bean ref="orderRepository" method="get"/>
-            <!-- marshall, unmarshal to Order and marshall again so we dont have to add @JsonIgnore on ResolvedOrder.status
-             for find-order request -->
-            <marshal>
-                <json library="Jackson"/>
-            </marshal>
-            <unmarshal>
-                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Order"/>
-            </unmarshal>
-            <marshal>
-                <json library="Jackson"/>
-            </marshal>
+            <to uri="bean:orderStatusProvider?method=inProcess" />
+
+            <!--dotazy na externi sklady-->
+            <!--ziskam udaje o cene itemu -->
+            <to uri="bean:orderRepository?method=get" />
+            <setProperty propertyName="orderItemsCount">
+                <simple>${body.itemsCount}</simple>
+            </setProperty>
+            <setProperty propertyName="itemPrice">
+                <simple>${body.itemPrice}</simple>
+            </setProperty>
+            <log message="items count - ${property.orderItemsCount}"/>
+            <log message="item price - ${property.itemPrice}"/>
 
             <removeHeaders pattern="*"/>
+
+            <!--SUPPLIER A-->
+            <to uri="bean:supplierAService?method=getAvailableRequest" />
+            <to uri="cxf:bean:supplier-a-ws"/>
+            <log message="response supplierA - ${body[0]}"/>
+
+            <setProperty propertyName="supplierAItemPrice">
+                <constant>null</constant>
+            </setProperty>
+            <log message="SupplierA item price before: ${property.supplierAItemPrice}" />
+            <choice>
+                <when>
+                    <simple>${body[0].available}</simple>
+                    <setProperty propertyName="supplierAItemPrice">
+                        <simple>${body[0].price.longValue}</simple>
+                    </setProperty>
+                </when>
+            </choice>
+            <log message="SupplierA item price after: ${property.supplierAItemPrice}" />
+
+            <!--SUPPLIER B-->
+            <to uri="bean:supplierBService?method=getAvailableRequest" />
+            <to uri="cxf:bean:supplier-b-ws"/>
+            <log message="response supplierB - ${body[0]}"/>
+
+            <setProperty propertyName="supplierBItemPrice">
+                <constant>null</constant>
+            </setProperty>
+            <log message="SupplierB item price before: ${property.supplierBItemPrice}" />
+            <choice>
+                <when>
+                    <simple>${body[0].available}</simple>
+                    <setProperty propertyName="supplierBItemPrice">
+                        <simple>${body[0].price.longValue}</simple>
+                    </setProperty>
+                </when>
+            </choice>
+            <log message="SupplierB item price after: ${property.supplierBItemPrice}" />
+            <!--END dotazy na externi sklady-->
+
+
+            <!--ACCOUNTING-->
+            <to uri="bean:orderRepository?method=getForAccounting" />
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
             <setHeader headerName="CamelHttpMethod">
                 <constant>POST</constant>
             </setHeader>
@@ -112,6 +167,7 @@
                     <setHeader headerName="CamelHttpResponseCode">
                         <constant>201</constant>
                     </setHeader>
+                    <log message="Accounting complete - total price: ${body.order.totalPrice}" />
                 </when>
                 <otherwise>
                     <to uri="bean:orderStatusProvider?method=cancel"/>
@@ -201,20 +257,42 @@
                      serviceName="ws:OrderService"
                      xmlns:ws="http://cz.cvut.order.endpoint"/>
 
+    <cxf:cxfEndpoint id="supplier-a-ws" address="https://localhost:8443/supplier-a/SupplierAService"
+                     serviceClass="cz.cvut.iss.generated.supplierA.SupplierA"
+                     endpointName="ssp:SupplierAPort"
+                     serviceName="ssp:SupplierA"
+                     xmlns:ssp="http://cz.cvut.supplier/supplierAApplication/service/1"/>
+
+    <cxf:cxfEndpoint id="supplier-b-ws" address="https://localhost:8443/supplier-b/SupplierBService"
+                     serviceClass="cz.cvut.iss.generated.supplierB.SupplierB"
+                     endpointName="ssp:SupplierBPort"
+                     serviceName="ssp:SupplierB"
+                     xmlns:ssp="http://cz.cvut.supplier/supplierBApplication/service/1"/>
+
+
     <!--Mozne nastaveni pouziti ssl primo na cxf endpoint, bez bridgeEndpointu-->
-    <!--<http:conduit name="{http://www.company.com/product/orderApplication/service/1}OrderApplication.http-conduit">-->
-    <!--<http:tlsClientParameters disableCNCheck="true">-->
-    <!--<sec:trustManagers>-->
-    <!--<sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>-->
-    <!--</sec:trustManagers>-->
-    <!--<sec:cipherSuitesFilter>-->
-    <!--<sec:include>.*_EXPORT_.*</sec:include>-->
-    <!--<sec:include>.*_EXPORT1024_.*</sec:include>-->
-    <!--<sec:include>.*_WITH_DES_.*</sec:include>-->
-    <!--<sec:include>.*_WITH_NULL_.*</sec:include>-->
-    <!--<sec:exclude>.*_DH_anon_.*</sec:exclude>-->
-    <!--</sec:cipherSuitesFilter>-->
-    <!--</http:tlsClientParameters>-->
-    <!--</http:conduit>-->
+    <http:conduit name="{http://cz.cvut.supplier/supplierAApplication/service/1}SupplierAPort.http-conduit">
+        <http:tlsClientParameters disableCNCheck="true">
+            <sec:trustManagers>
+                <sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>
+            </sec:trustManagers>
+        </http:tlsClientParameters>
+        <http:authorization>
+            <sec:UserName>webuser</sec:UserName>
+            <sec:Password>JBoss.123</sec:Password>
+            <sec:AuthorizationType>Basic</sec:AuthorizationType>
+        </http:authorization>
+    </http:conduit>
+
+    <http:conduit name="{http://cz.cvut.supplier/supplierBApplication/service/1}SupplierBPort.http-conduit">
+        <http:tlsClientParameters disableCNCheck="true">
+            <sec:trustManagers>
+                <sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>
+            </sec:trustManagers>
+            <sec:keyManagers keyPassword="redhat">
+                <sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>
+            </sec:keyManagers>
+        </http:tlsClientParameters>
+    </http:conduit>
 
 </beans>

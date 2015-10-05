@@ -121,16 +121,80 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>2.5.3</version>
+                <version>3.0.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <manifestLocation>target/META-INF</manifestLocation>
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>cz.cvut.iss*</Export-Package>
-                        <Import-Package>*</Import-Package>
+                        <Import-Package>
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
+            </plugin>
+
+
+            <!-- usage of jax-ws maven plugin-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jaxws-maven-plugin</artifactId>
+                <version>1.12</version>
+                <executions>
+                    <execution>
+                        <id>wsdl-supplierA-import</id>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                        <configuration>
+                            <packageName>cz.cvut.iss.generated.supplierA</packageName>
+                            <sourceDestDir>target/generated-classes</sourceDestDir>
+                            <wsdlDirectory>src/main/resources/wsdl/supplierA</wsdlDirectory>
+                            <wsdlFiles>
+                                <wsdlFile>SupplierAService.wsdl</wsdlFile>
+                            </wsdlFiles>
+                            <keep>true</keep>
+                            <staleFile>target/jaxws/supplierA/.staleFlag</staleFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>wsdl-supplierB-import</id>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                        <configuration>
+                            <packageName>cz.cvut.iss.generated.supplierB</packageName>
+                            <sourceDestDir>target/generated-classes</sourceDestDir>
+                            <wsdlDirectory>src/main/resources/wsdl/supplierB</wsdlDirectory>
+                            <wsdlFiles>
+                                <wsdlFile>SupplierBService.wsdl</wsdlFile>
+                            </wsdlFiles>
+                            <keep>true</keep>
+                            <staleFile>target/jaxws/supplierB/.staleFlag</staleFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>target/generated-classes</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

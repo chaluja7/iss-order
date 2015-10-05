@@ -3,6 +3,7 @@ package cz.cvut.iss.service;
 import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
+import cz.cvut.iss.model.OrderItem;
 import cz.cvut.iss.model.ResolvedOrder;
 import org.apache.camel.ExchangeProperty;
 
@@ -38,6 +39,25 @@ public final class OrderRepository implements OrderService {
         }
 
         throw new NoSuchOrderException(id);
+    }
+
+    /**
+     * accounting nechce dostavat nektere property, proto tato metoda, ktera se techto atributu zbavi
+     */
+    public ResolvedOrder getForAccounting(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+        ResolvedOrder resolvedOrder = this.get(id);
+
+        ResolvedOrder clone = resolvedOrder.getClone();
+        clone.setStatus(null);
+        clone.setTotalPrice(null);
+        if(clone.getItems() != null) {
+            for (OrderItem orderItem : clone.getItems()) {
+                orderItem.setSku(null);
+            }
+
+        }
+
+        return clone;
     }
 
     public void setTotalPrice(@ExchangeProperty("orderId") long id, @ExchangeProperty("orderTotalPrice") Long totalPrice) throws NoSuchOrderException {

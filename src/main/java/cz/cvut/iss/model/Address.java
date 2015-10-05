@@ -9,7 +9,7 @@ import javax.xml.bind.annotation.XmlElement;
  * @since 28.09.15
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class Address {
+public class Address implements Cloneable<Address> {
 
     @XmlElement(required = true)
     private String firstName;
@@ -69,5 +69,17 @@ public class Address {
     public boolean isValid() {
         return firstName != null && lastName != null && street != null && city != null && zipCode != null
             && firstName.length() > 0 && lastName.length() > 0 && street.length() > 0 && city.length() > 0 && zipCode.length() > 0;
+    }
+
+    @Override
+    public Address getClone() {
+        Address address = new Address();
+        address.setCity(this.getCity());
+        address.setFirstName(this.getFirstName());
+        address.setLastName(this.getLastName());
+        address.setStreet(this.getStreet());
+        address.setZipCode(this.getZipCode());
+
+        return address;
     }
 }

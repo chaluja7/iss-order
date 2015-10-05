@@ -47,4 +47,18 @@ public class Order {
         return true;
     }
 
+    public double getItemPrice() {
+        //TODO jakubchalupa - vraci price prvni polozky
+        if(items == null || items.isEmpty() || items.get(0).getUnitPrice() == null || items.get(0).getUnitPrice() < 0) return 0;
+
+        return items.get(0).getUnitPrice();
+    }
+
+    public int getItemsCount() {
+        //TODO jakubchalupa pocita jen prvni ITEM
+        if(items == null || items.isEmpty() || items.get(0).getCount() == null || items.get(0).getCount() <= 0) return 0;
+
+        return items.get(0).getCount();
+    }
+
 }

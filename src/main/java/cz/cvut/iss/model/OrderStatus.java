@@ -9,7 +9,7 @@ import javax.xml.bind.annotation.XmlElement;
  * @since 04.10.15
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class OrderStatus {
+public class OrderStatus implements Cloneable<OrderStatus> {
 
     @XmlElement
     private String resolution;
@@ -33,6 +33,11 @@ public class OrderStatus {
     @Override
     public String toString() {
         return "OrderStatus [resolution=" + resolution + ", description=" + description + "]";
+    }
+
+    @Override
+    public OrderStatus getClone() {
+        return new OrderStatus(this.getResolution(), this.getDescription());
     }
 
 }
