@@ -74,12 +74,54 @@
             <setProperty propertyName="orderId">
                 <simple>${body}</simple>
             </setProperty>
-            <to uri="bean:orderStatusProvider?method=inProcess" />
-            <setHeader headerName="CamelHttpResponseCode">
-                <constant>201</constant>
+            <to uri="bean:orderStatusProvider?method=inProcess"/>
+            <bean ref="orderRepository" method="get"/>
+            <!-- marshall, unmarshal to Order and marshall again so we dont have to add @JsonIgnore on ResolvedOrder.status
+             for find-order request -->
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Order"/>
+            </unmarshal>
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
+
+            <removeHeaders pattern="*"/>
+            <setHeader headerName="CamelHttpMethod">
+                <constant>POST</constant>
             </setHeader>
+            <setHeader headerName="Content-Type">
+                <constant>application/json</constant>
+            </setHeader>
+            <to uri="https4://localhost:8443/accounting/rest/accounting/invoice/issue?sslContextParameters=#sslContextParametersWithoutAuthentication"/>
+            <removeHeaders pattern="*"/><!-- important, wont work if missing -->
+            <convertBodyTo type="java.lang.String"/>
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Invoice"/>
+            </unmarshal>
+            <choice>
+                <when>
+                    <simple>${body.status} == 'ISSUED'</simple>
+                    <to uri="bean:orderStatusProvider?method=account"/>
+                    <setProperty propertyName="orderTotalPrice">
+                        <simple>${body.order.totalPrice}</simple>
+                    </setProperty>
+                    <to uri="bean:orderRepository?method=setTotalPrice"/>
+                    <setHeader headerName="CamelHttpResponseCode">
+                        <constant>201</constant>
+                    </setHeader>
+                </when>
+                <otherwise>
+                    <to uri="bean:orderStatusProvider?method=cancel"/>
+                    <setHeader headerName="CamelHttpResponseCode">
+                        <constant>406</constant>
+                    </setHeader>
+                </otherwise>
+            </choice>
             <setHeader headerName="Location">
-                <simple>/orders/${body}</simple>
+                <simple>/orders/${property.orderId}</simple>
             </setHeader>
             <setBody>
                 <constant>null</constant>
@@ -87,7 +129,7 @@
         </route>
 
         <route id="find-order">
-            <from uri="direct:find-order" />
+            <from uri="direct:find-order"/>
             <onException>
                 <exception>cz.cvut.iss.exception.NoSuchOrderException</exception>
                 <handled>
@@ -103,25 +145,27 @@
             <setProperty propertyName="orderId">
                 <simple>${header.orderId}</simple>
             </setProperty>
-            <to uri="bean:orderRepository?method=get" />
-            <marshal><json library="Jackson" /></marshal>
+            <to uri="bean:orderRepository?method=get"/>
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
         </route>
 
         <route id="soap-find-order">
-            <from uri="direct:soap-find-order" />
+            <from uri="direct:soap-find-order"/>
             <setProperty propertyName="orderId">
                 <simple>${header.orderId}</simple>
             </setProperty>
-            <to uri="bean:orderRepository?method=get" />
+            <to uri="bean:orderRepository?method=get"/>
         </route>
 
         <route id="soap-new-order">
-            <from uri="direct:soap-new-order" />
-            <to uri="bean:orderRepository?method=create" />
+            <from uri="direct:soap-new-order"/>
+            <to uri="bean:orderRepository?method=create"/>
             <setProperty propertyName="orderId">
                 <simple>${body}</simple>
             </setProperty>
-            <to uri="bean:orderStatusProvider?method=inProcess" />
+            <to uri="bean:orderStatusProvider?method=inProcess"/>
         </route>
 
         <route id="cxf-order-ws">
@@ -132,7 +176,7 @@
                     <setHeader headerName="orderId">
                         <simple>${body[0]}</simple>
                     </setHeader>
-                    <to uri="direct:soap-find-order" />
+                    <to uri="direct:soap-find-order"/>
                 </when>
                 <when>
                     <simple>${in.header.operationName} == 'create'</simple>
@@ -159,18 +203,18 @@
 
     <!--Mozne nastaveni pouziti ssl primo na cxf endpoint, bez bridgeEndpointu-->
     <!--<http:conduit name="{http://www.company.com/product/orderApplication/service/1}OrderApplication.http-conduit">-->
-        <!--<http:tlsClientParameters disableCNCheck="true">-->
-            <!--<sec:trustManagers>-->
-                <!--<sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>-->
-            <!--</sec:trustManagers>-->
-            <!--<sec:cipherSuitesFilter>-->
-                <!--<sec:include>.*_EXPORT_.*</sec:include>-->
-                <!--<sec:include>.*_EXPORT1024_.*</sec:include>-->
-                <!--<sec:include>.*_WITH_DES_.*</sec:include>-->
-                <!--<sec:include>.*_WITH_NULL_.*</sec:include>-->
-                <!--<sec:exclude>.*_DH_anon_.*</sec:exclude>-->
-            <!--</sec:cipherSuitesFilter>-->
-        <!--</http:tlsClientParameters>-->
+    <!--<http:tlsClientParameters disableCNCheck="true">-->
+    <!--<sec:trustManagers>-->
+    <!--<sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>-->
+    <!--</sec:trustManagers>-->
+    <!--<sec:cipherSuitesFilter>-->
+    <!--<sec:include>.*_EXPORT_.*</sec:include>-->
+    <!--<sec:include>.*_EXPORT1024_.*</sec:include>-->
+    <!--<sec:include>.*_WITH_DES_.*</sec:include>-->
+    <!--<sec:include>.*_WITH_NULL_.*</sec:include>-->
+    <!--<sec:exclude>.*_DH_anon_.*</sec:exclude>-->
+    <!--</sec:cipherSuitesFilter>-->
+    <!--</http:tlsClientParameters>-->
     <!--</http:conduit>-->
 
 </beans>

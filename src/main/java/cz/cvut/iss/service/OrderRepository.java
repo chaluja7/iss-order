@@ -40,6 +40,10 @@ public final class OrderRepository implements OrderService {
         throw new NoSuchOrderException(id);
     }
 
+    public void setTotalPrice(@ExchangeProperty("orderId") long id, @ExchangeProperty("orderTotalPrice") Long totalPrice) throws NoSuchOrderException {
+        get(id).setTotalPrice(totalPrice);
+    }
+
     public static void clear() {
         ORDERS.clear();
         atomicLong = new AtomicLong(0);

@@ -13,6 +13,7 @@ public final class OrderStatusProvider {
 
     private static final String RESOLUTION_CANCELLED = "CANCELLED";
     private static final String RESOLUTION_IN_PROCESS = "IN PROCESS";
+    private static final String RESOLUTION_ACCOUNTED = "ACCOUNTED";
     private static final String RESOLUTION_CONFIRMED = "CONFIRMED";
 
     private OrderRepository orderRepository;
@@ -23,6 +24,10 @@ public final class OrderStatusProvider {
 
     public void cancel(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
         setStatus(orderId, RESOLUTION_CANCELLED, "Items unavailable");
+    }
+
+    public void account(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
+        setStatus(orderId, RESOLUTION_ACCOUNTED, "The order is accounted");
     }
 
     public void confirm(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {

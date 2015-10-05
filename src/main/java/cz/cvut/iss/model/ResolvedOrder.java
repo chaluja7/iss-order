@@ -13,6 +13,8 @@ import javax.xml.bind.annotation.XmlElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ResolvedOrder extends Order {
 
+    private Long totalPrice;
+
     @XmlElement
     private Long id;
 
@@ -33,5 +35,13 @@ public class ResolvedOrder extends Order {
 
     public void setStatus(OrderStatus status) {
         this.status = status;
+    }
+
+    public Long getTotalPrice() {
+        return totalPrice;
+    }
+
+    public void setTotalPrice(Long totalPrice) {
+        this.totalPrice = totalPrice;
     }
 }
