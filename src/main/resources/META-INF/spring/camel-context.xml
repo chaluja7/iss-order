@@ -80,7 +80,8 @@
                 <constant>null</constant>
             </setBody>
 
-            <to uri="jmstx:queue:masterslave" />
+            <!-- XA tr -->
+            <!--<to uri="jmstx:queue:masterslave" />-->
 
         </route>
 
@@ -168,65 +169,74 @@
         <!--</http:tlsClientParameters>-->
     <!--</http:conduit>-->
 
-    <!-- XA transakce -->
-
     <!--
-        OSGi TM Service
+
+            XA transakce
+
     -->
-    <!-- access through Spring's PlatformTransactionManager -->
-    <osgi:service id="osgiPlatformTransactionManager"
-               interface="org.springframework.transaction.PlatformTransactionManager"/>
 
-    <!-- access through PlatformTransactionManager -->
-    <osgi:service id="osgiJtaTransactionManager"
-               interface="javax.transaction.TransactionManager"/>
+    <!--&lt;!&ndash;-->
+        <!--OSGi TM Service-->
+    <!--&ndash;&gt;-->
+    <!--&lt;!&ndash; access through Spring's PlatformTransactionManager &ndash;&gt;-->
+    <!--<osgi:service id="osgiPlatformTransactionManager"-->
+               <!--interface="org.springframework.transaction.PlatformTransactionManager"/>-->
 
-    <!--
-        JMS TX endpoint configuration
-    -->
-    <bean id="jmstx"
-          class="org.apache.activemq.camel.component.ActiveMQComponent">
-        <property name="configuration" ref="jmsTxConfig" />
-    </bean>
+    <!--&lt;!&ndash; access through PlatformTransactionManager &ndash;&gt;-->
+    <!--<osgi:service id="osgiJtaTransactionManager"-->
+               <!--interface="javax.transaction.TransactionManager"/>-->
 
-    <bean id="jmsTxConfig"
-          class="org.apache.camel.component.jms.JmsConfiguration">
-        <property name="connectionFactory" ref="jmsXaPoolConnectionFactory"/>
-        <property name="transactionManager" ref="osgiPlatformTransactionManager"/>
-        <property name="transacted" value="false"/>
-        <property name="cacheLevelName" value="CACHE_CONNECTION"/>
-    </bean>
+    <!--&lt;!&ndash;-->
+        <!--JMS TX endpoint configuration-->
+    <!--&ndash;&gt;-->
+    <!--<bean id="jmstx"-->
+          <!--class="org.apache.activemq.camel.component.ActiveMQComponent">-->
+        <!--<property name="configuration" ref="jmsTxConfig" />-->
+    <!--</bean>-->
 
-    <!-- connection factory wrapper to support auto-enlisting of XA resource -->
-    <bean id="jmsXaPoolConnectionFactory"
-          class="org.apache.activemq.pool.JcaPooledConnectionFactory">
-        <property name="name" value="MyXaResourceName" />
-        <property name="maxConnections" value="1" />
-        <property name="connectionFactory" ref="jmsXaConnectionFactory" />
-        <property name="transactionManager" ref="osgiJtaTransactionManager" />
-    </bean>
+    <!--<bean id="jmsTxConfig"-->
+          <!--class="org.apache.camel.component.jms.JmsConfiguration">-->
+        <!--<property name="connectionFactory" ref="jmsXaPoolConnectionFactory"/>-->
+        <!--<property name="transactionManager" ref="osgiPlatformTransactionManager"/>-->
+        <!--<property name="transacted" value="false"/>-->
+        <!--<property name="cacheLevelName" value="CACHE_CONNECTION"/>-->
+    <!--</bean>-->
 
-    <bean id="jmsXaConnectionFactory"
-          class="org.apache.activemq.ActiveMQXAConnectionFactory">
-        <property name="brokerURL" value="discovery:(fabric:masterslave)"/>
-        <property name="userName" value="admin"/>
-        <property name="password" value="admin"/>
-        <property name="redeliveryPolicy">
-            <bean class="org.apache.activemq.RedeliveryPolicy">
-                <property name="maximumRedeliveries" value="0"/>
-            </bean>
-        </property>
-    </bean>
+    <!--&lt;!&ndash; connection factory wrapper to support auto-enlisting of XA resource &ndash;&gt;-->
+    <!--<bean id="jmsXaPoolConnectionFactory"-->
+          <!--class="org.apache.activemq.pool.JcaPooledConnectionFactory">-->
+        <!--<property name="name" value="MyXaResourceName" />-->
+        <!--<property name="maxConnections" value="1" />-->
+        <!--<property name="connectionFactory" ref="jmsXaConnectionFactory" />-->
+        <!--<property name="transactionManager" ref="osgiJtaTransactionManager" />-->
+    <!--</bean>-->
 
-    <!--
-        ActiveMQ XA Resource Manager
-    -->
-    <bean id="resourceManager"
-          class="org.apache.activemq.pool.ActiveMQResourceManager"
-          init-method="recoverResource">
-        <property name="transactionManager" ref="osgiJtaTransactionManager" />
-        <property name="connectionFactory" ref="jmsXaPoolConnectionFactory" />
-        <property name="resourceName" value="activemq.default" />
-    </bean>
+    <!--<bean id="jmsXaConnectionFactory"-->
+          <!--class="org.apache.activemq.ActiveMQXAConnectionFactory">-->
+        <!--<property name="brokerURL" value="discovery:(fabric:masterslave)"/>-->
+        <!--<property name="userName" value="admin"/>-->
+        <!--<property name="password" value="admin"/>-->
+        <!--<property name="redeliveryPolicy">-->
+            <!--<bean class="org.apache.activemq.RedeliveryPolicy">-->
+                <!--<property name="maximumRedeliveries" value="0"/>-->
+            <!--</bean>-->
+        <!--</property>-->
+    <!--</bean>-->
+
+    <!--&lt;!&ndash;-->
+        <!--ActiveMQ XA Resource Manager-->
+    <!--&ndash;&gt;-->
+    <!--<bean id="resourceManager"-->
+          <!--class="org.apache.activemq.pool.ActiveMQResourceManager"-->
+          <!--init-method="recoverResource">-->
+        <!--<property name="transactionManager" ref="osgiJtaTransactionManager" />-->
+        <!--<property name="connectionFactory" ref="jmsXaPoolConnectionFactory" />-->
+        <!--<property name="resourceName" value="activemq.default" />-->
+        <!--<property name="userName" value="admin" />-->
+        <!--<property name="password" value="admin" />-->
+    <!--</bean>-->
+
+
+
 
 </beans>
