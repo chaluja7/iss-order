@@ -227,6 +227,6 @@
         <property name="transactionManager" ref="osgiJtaTransactionManager" />
         <property name="connectionFactory" ref="jmsXaPoolConnectionFactory" />
         <property name="resourceName" value="activemq.default" />
-    </bean>§
+    </bean>
 
 </beans>
