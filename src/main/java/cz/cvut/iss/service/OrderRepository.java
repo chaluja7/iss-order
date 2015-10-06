@@ -4,6 +4,7 @@ import cz.cvut.iss.amq.Producer;
 import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
+import cz.cvut.iss.model.ResolvedOrder;
 import org.apache.camel.ExchangeProperty;
 
 import javax.jms.JMSException;
@@ -14,7 +15,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class OrderRepository implements OrderService {
 
-    private static final Map<Long, Order> ORDERS = new TreeMap<>();
+    private static final Map<Long, ResolvedOrder> ORDERS = new TreeMap<>();
+
     private static AtomicLong atomicLong = new AtomicLong(0);
 
     @Override
@@ -23,21 +25,28 @@ public final class OrderRepository implements OrderService {
             throw new BadOrderBodyException(order);
         }
 
-        order.setId(atomicLong.incrementAndGet());
-        ORDERS.put(order.getId(), order);
+        ResolvedOrder resolvedOrder = new ResolvedOrder();
+        resolvedOrder.setItems(order.getItems());
+        resolvedOrder.setAddress(order.getAddress());
+        resolvedOrder.setId(atomicLong.incrementAndGet());
+        ORDERS.put(resolvedOrder.getId(), resolvedOrder);
 
-        sendOrderToExpedition(order);
+//        sendOrderToExpedition(resolvedOrder);
 
-        return order.getId();
+        return resolvedOrder.getId();
     }
 
     @Override
-    public Order get(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+    public ResolvedOrder get(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
         if(ORDERS.containsKey(id)) {
             return ORDERS.get(id);
         }
 
         throw new NoSuchOrderException(id);
+    }
+
+    public void setTotalPrice(@ExchangeProperty("orderId") long id, @ExchangeProperty("orderTotalPrice") Long totalPrice) throws NoSuchOrderException {
+        get(id).setTotalPrice(totalPrice);
     }
 
     public static void clear() {
@@ -48,8 +57,8 @@ public final class OrderRepository implements OrderService {
     private OrderRepository() {
     }
 
-    private void sendOrderToExpedition(Order order) throws JAXBException, JMSException {
+    public void sendOrderToExpedition(@ExchangeProperty("orderId") long id) throws JAXBException, JMSException {
         Producer producer = new Producer();
-        producer.produceOrder(order);
+        producer.produceOrder(id);
     }
 }

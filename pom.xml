@@ -17,6 +17,9 @@
         <location.truststore>src/main/resources/</location.truststore>
 
         <jboss.fuse.bom.version>6.2.0.redhat-133</jboss.fuse.bom.version>
+
+        <spring-version>3.0.5.RELEASE</spring-version>
+        <xbean-spring-version>3.5</xbean-spring-version>
     </properties>
 
     <dependencyManagement>
@@ -93,6 +96,10 @@
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jms</artifactId>
+        </dependency>
         <!-- AMQ end -->
 
         <!-- XA transakce -->
@@ -107,6 +114,35 @@
             <scope>provided</scope>
         </dependency>
         <!-- XA transakce end -->
+
+        <!-- Spring transaction dependencies -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aop</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+
+        <!--  This is needed by the camel-jms component -->
+        <dependency>
+            <groupId>org.apache.xbean</groupId>
+            <artifactId>xbean-spring</artifactId>
+            <version>${xbean-spring-version}</version>
+        </dependency>
 
     </dependencies>
 
@@ -160,7 +196,14 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>cz.cvut.iss*</Export-Package>
-                        <Import-Package>*</Import-Package>
+                        <Import-Package> org.springframework.core,
+                            org.apache.camel,
+                            org.apache.camel.component.jms,
+                            org.apache.activemq,
+                            org.apache.activemq.xbean,
+                            org.apache.activemq.pool,
+                            org.apache.xbean.spring,
+                            org.apache.commons.pool,*</Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

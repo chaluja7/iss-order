@@ -22,6 +22,11 @@
     </camel:sslContextParameters>
 
     <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository" />
+    <bean id="orderStatusProvider" class="cz.cvut.iss.service.OrderStatusProvider">
+        <property name="orderRepository" ref="orderRepository" />
+    </bean>
+    <bean id="exchangeProcessor" class="cz.cvut.iss.processor.ExchangeProcessor" />
+
 
     <camelContext xmlns="http://camel.apache.org/schema/spring">
         <route id="orderHttpsPost">
@@ -55,7 +60,9 @@
 
         <route id="new-order">
             <from uri="direct:new-order" />
-
+            <transacted ref="XA_TX_REQUIRED" />
+            <bean ref="exchangeProcessor" method="handleVipHeader"/>
+            <log message="VIP: ${header.X-Els-Vip}"/>
             <onException>
                 <exception>cz.cvut.iss.exception.BadOrderBodyException</exception>
                 <handled>
@@ -70,23 +77,75 @@
             </onException>
 
             <to uri="bean:orderRepository?method=create" />
-            <setHeader headerName="CamelHttpResponseCode">
-                <constant>201</constant>
+            <setProperty propertyName="orderId">
+                <simple>${body}</simple>
+            </setProperty>
+            <to uri="bean:orderStatusProvider?method=inProcess"/>
+            <bean ref="orderRepository" method="get"/>
+            <!-- marshall, unmarshal to Order and marshall again so we dont have to add @JsonIgnore on ResolvedOrder.status
+             for find-order request -->
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Order"/>
+            </unmarshal>
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
+
+            <removeHeaders pattern="*"/>
+            <setHeader headerName="CamelHttpMethod">
+                <constant>POST</constant>
             </setHeader>
+            <setHeader headerName="Content-Type">
+                <constant>application/json</constant>
+            </setHeader>
+            <to uri="https4://localhost:8443/accounting/rest/accounting/invoice/issue?sslContextParameters=#sslContextParametersWithoutAuthentication"/>
+            <removeHeaders pattern="*"/><!-- important, wont work if missing -->
+            <convertBodyTo type="java.lang.String"/>
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Invoice"/>
+            </unmarshal>
+            <choice>
+                <when>
+                    <simple>${body.status} == 'ISSUED'</simple>
+                    <to uri="bean:orderStatusProvider?method=account"/>
+                    <setProperty propertyName="orderTotalPrice">
+                        <simple>${body.order.totalPrice}</simple>
+                    </setProperty>
+                    <to uri="bean:orderRepository?method=setTotalPrice"/>
+                    <setHeader headerName="CamelHttpResponseCode">
+                        <constant>201</constant>
+                    </setHeader>
+                </when>
+                <otherwise>
+                    <to uri="bean:orderStatusProvider?method=cancel"/>
+                    <setHeader headerName="CamelHttpResponseCode">
+                        <constant>406</constant>
+                    </setHeader>
+                </otherwise>
+            </choice>
             <setHeader headerName="Location">
-                <simple>/orders/${body}</simple>
+                <simple>/orders/${property.orderId}</simple>
             </setHeader>
             <setBody>
                 <constant>null</constant>
             </setBody>
 
+
+            <!--<to uri="bean:orderRepository?method=sendOrderToExpedition" />-->
+            <transform>
+                <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
+            </transform>
+            <!--<to uri="activemq:queue:expedition" pattern="InOnly" />-->
             <!-- XA tr -->
-            <!--<to uri="jmstx:queue:masterslave" />-->
+            <to uri="jmstx:queue:expedition" />
 
         </route>
 
         <route id="find-order">
-            <from uri="direct:find-order" />
+            <from uri="direct:find-order"/>
             <onException>
                 <exception>cz.cvut.iss.exception.NoSuchOrderException</exception>
                 <handled>
@@ -102,21 +161,27 @@
             <setProperty propertyName="orderId">
                 <simple>${header.orderId}</simple>
             </setProperty>
-            <to uri="bean:orderRepository?method=get" />
-            <marshal><json library="Jackson" /></marshal>
+            <to uri="bean:orderRepository?method=get"/>
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
         </route>
 
         <route id="soap-find-order">
-            <from uri="direct:soap-find-order" />
+            <from uri="direct:soap-find-order"/>
             <setProperty propertyName="orderId">
                 <simple>${header.orderId}</simple>
             </setProperty>
-            <to uri="bean:orderRepository?method=get" />
+            <to uri="bean:orderRepository?method=get"/>
         </route>
 
         <route id="soap-new-order">
-            <from uri="direct:soap-new-order" />
-            <to uri="bean:orderRepository?method=create" />
+            <from uri="direct:soap-new-order"/>
+            <to uri="bean:orderRepository?method=create"/>
+            <setProperty propertyName="orderId">
+                <simple>${body}</simple>
+            </setProperty>
+            <to uri="bean:orderStatusProvider?method=inProcess"/>
         </route>
 
         <route id="cxf-order-ws">
@@ -127,7 +192,7 @@
                     <setHeader headerName="orderId">
                         <simple>${body[0]}</simple>
                     </setHeader>
-                    <to uri="direct:soap-find-order" />
+                    <to uri="direct:soap-find-order"/>
                 </when>
                 <when>
                     <simple>${in.header.operationName} == 'create'</simple>
@@ -155,18 +220,18 @@
 
     <!--Mozne nastaveni pouziti ssl primo na cxf endpoint, bez bridgeEndpointu-->
     <!--<http:conduit name="{http://www.company.com/product/orderApplication/service/1}OrderApplication.http-conduit">-->
-        <!--<http:tlsClientParameters disableCNCheck="true">-->
-            <!--<sec:trustManagers>-->
-                <!--<sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>-->
-            <!--</sec:trustManagers>-->
-            <!--<sec:cipherSuitesFilter>-->
-                <!--<sec:include>.*_EXPORT_.*</sec:include>-->
-                <!--<sec:include>.*_EXPORT1024_.*</sec:include>-->
-                <!--<sec:include>.*_WITH_DES_.*</sec:include>-->
-                <!--<sec:include>.*_WITH_NULL_.*</sec:include>-->
-                <!--<sec:exclude>.*_DH_anon_.*</sec:exclude>-->
-            <!--</sec:cipherSuitesFilter>-->
-        <!--</http:tlsClientParameters>-->
+    <!--<http:tlsClientParameters disableCNCheck="true">-->
+    <!--<sec:trustManagers>-->
+    <!--<sec:keyStore type="JKS" password="redhat" file="${location.keystore}keystore.jks"/>-->
+    <!--</sec:trustManagers>-->
+    <!--<sec:cipherSuitesFilter>-->
+    <!--<sec:include>.*_EXPORT_.*</sec:include>-->
+    <!--<sec:include>.*_EXPORT1024_.*</sec:include>-->
+    <!--<sec:include>.*_WITH_DES_.*</sec:include>-->
+    <!--<sec:include>.*_WITH_NULL_.*</sec:include>-->
+    <!--<sec:exclude>.*_DH_anon_.*</sec:exclude>-->
+    <!--</sec:cipherSuitesFilter>-->
+    <!--</http:tlsClientParameters>-->
     <!--</http:conduit>-->
 
     <!--
@@ -175,68 +240,102 @@
 
     -->
 
-    <!--&lt;!&ndash;-->
-        <!--OSGi TM Service-->
-    <!--&ndash;&gt;-->
-    <!--&lt;!&ndash; access through Spring's PlatformTransactionManager &ndash;&gt;-->
-    <!--<osgi:service id="osgiPlatformTransactionManager"-->
-               <!--interface="org.springframework.transaction.PlatformTransactionManager"/>-->
+    <!--
+        OSGi TM Service
+    -->
+    <!-- access through Spring's PlatformTransactionManager -->
+    <osgi:reference id="osgiPlatformTransactionManager"
+               interface="org.springframework.transaction.PlatformTransactionManager"/>
 
-    <!--&lt;!&ndash; access through PlatformTransactionManager &ndash;&gt;-->
-    <!--<osgi:service id="osgiJtaTransactionManager"-->
-               <!--interface="javax.transaction.TransactionManager"/>-->
+    <!-- access through PlatformTransactionManager -->
+    <osgi:reference id="osgiJtaTransactionManager"
+               interface="javax.transaction.TransactionManager"/>
 
-    <!--&lt;!&ndash;-->
-        <!--JMS TX endpoint configuration-->
-    <!--&ndash;&gt;-->
-    <!--<bean id="jmstx"-->
-          <!--class="org.apache.activemq.camel.component.ActiveMQComponent">-->
-        <!--<property name="configuration" ref="jmsTxConfig" />-->
-    <!--</bean>-->
+    <!--
+        JMS TX endpoint configuration
+    -->
+    <bean id="jmstx"
+          class="org.apache.activemq.camel.component.ActiveMQComponent">
+        <property name="configuration" ref="jmsTxConfig" />
+    </bean>
 
-    <!--<bean id="jmsTxConfig"-->
-          <!--class="org.apache.camel.component.jms.JmsConfiguration">-->
-        <!--<property name="connectionFactory" ref="jmsXaPoolConnectionFactory"/>-->
-        <!--<property name="transactionManager" ref="osgiPlatformTransactionManager"/>-->
-        <!--<property name="transacted" value="false"/>-->
-        <!--<property name="cacheLevelName" value="CACHE_CONNECTION"/>-->
-    <!--</bean>-->
+    <bean id="jmsTxConfig"
+          class="org.apache.camel.component.jms.JmsConfiguration">
+        <property name="connectionFactory" ref="jmsXaPoolConnectionFactory"/>
+        <property name="transactionManager" ref="osgiPlatformTransactionManager"/>
+        <property name="transacted" value="false"/>
+        <property name="cacheLevelName" value="CACHE_CONNECTION"/>
+    </bean>
 
-    <!--&lt;!&ndash; connection factory wrapper to support auto-enlisting of XA resource &ndash;&gt;-->
-    <!--<bean id="jmsXaPoolConnectionFactory"-->
-          <!--class="org.apache.activemq.pool.JcaPooledConnectionFactory">-->
-        <!--<property name="name" value="MyXaResourceName" />-->
-        <!--<property name="maxConnections" value="1" />-->
-        <!--<property name="connectionFactory" ref="jmsXaConnectionFactory" />-->
-        <!--<property name="transactionManager" ref="osgiJtaTransactionManager" />-->
-    <!--</bean>-->
+    <!-- connection factory wrapper to support auto-enlisting of XA resource -->
+    <bean id="jmsXaPoolConnectionFactory"
+          class="org.apache.activemq.pool.JcaPooledConnectionFactory">
+        <property name="name" value="MyXaResourceName" />
+        <property name="maxConnections" value="1" />
+        <property name="connectionFactory" ref="jmsXaConnectionFactory" />
+        <property name="transactionManager" ref="osgiJtaTransactionManager" />
+    </bean>
 
-    <!--<bean id="jmsXaConnectionFactory"-->
-          <!--class="org.apache.activemq.ActiveMQXAConnectionFactory">-->
-        <!--<property name="brokerURL" value="discovery:(fabric:masterslave)"/>-->
+    <bean id="jmsXaConnectionFactory"
+          class="org.apache.activemq.ActiveMQXAConnectionFactory">
+        <property name="brokerURL" value="discovery:(fabric:masterslave)"/>
+        <property name="userName" value="admin"/>
+        <property name="password" value="admin"/>
+        <property name="redeliveryPolicy">
+            <bean class="org.apache.activemq.RedeliveryPolicy">
+                <property name="maximumRedeliveries" value="0"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!--
+        ActiveMQ XA Resource Manager
+    -->
+    <bean id="resourceManager"
+          class="org.apache.activemq.pool.ActiveMQResourceManager"
+          init-method="recoverResource">
+        <property name="transactionManager" ref="osgiJtaTransactionManager" />
+        <property name="connectionFactory" ref="jmsXaPoolConnectionFactory" />
+        <property name="resourceName" value="activemq.default" />
+        <property name="userName" value="admin" />
+        <property name="password" value="admin" />
+    </bean>
+
+    <bean id="XA_TX_REQUIRED" class="org.apache.camel.spring.spi.SpringTransactionPolicy">
+        <property name="transactionManager" ref="osgiPlatformTransactionManager"/>
+    </bean>
+
+
+    <!-- =============================== -->
+    <!--
+        Configure the activemq component:
+      -->
+    <!--<bean id="jmsConnectionFactory"-->
+          <!--class="org.apache.activemq.ActiveMQConnectionFactory">-->
+        <!--<property name="brokerURL" value="discovery:(fabric:masterslave)" />-->
         <!--<property name="userName" value="admin"/>-->
         <!--<property name="password" value="admin"/>-->
-        <!--<property name="redeliveryPolicy">-->
-            <!--<bean class="org.apache.activemq.RedeliveryPolicy">-->
-                <!--<property name="maximumRedeliveries" value="0"/>-->
-            <!--</bean>-->
-        <!--</property>-->
+        <!--&lt;!&ndash;<property name="trustStore" value="/conf/client.ts"/>&ndash;&gt;-->
+        <!--&lt;!&ndash;<property name="trustStorePassword" value="password"/>&ndash;&gt;-->
     <!--</bean>-->
 
-    <!--&lt;!&ndash;-->
-        <!--ActiveMQ XA Resource Manager-->
-    <!--&ndash;&gt;-->
-    <!--<bean id="resourceManager"-->
-          <!--class="org.apache.activemq.pool.ActiveMQResourceManager"-->
-          <!--init-method="recoverResource">-->
-        <!--<property name="transactionManager" ref="osgiJtaTransactionManager" />-->
-        <!--<property name="connectionFactory" ref="jmsXaPoolConnectionFactory" />-->
-        <!--<property name="resourceName" value="activemq.default" />-->
-        <!--<property name="userName" value="admin" />-->
-        <!--<property name="password" value="admin" />-->
+    <!--<bean id="pooledConnectionFactory"-->
+          <!--class="org.apache.activemq.pool.PooledConnectionFactory">-->
+        <!--<property name="maxConnections" value="8" />-->
+        <!--&lt;!&ndash;<property name="maximumActive" value="500" />&ndash;&gt;-->
+        <!--<property name="connectionFactory" ref="jmsConnectionFactory" />-->
     <!--</bean>-->
 
+    <!--<bean id="jmsConfig" class="org.apache.camel.component.jms.JmsConfiguration">-->
+        <!--<property name="connectionFactory" ref="pooledConnectionFactory"/>-->
+        <!--<property name="transacted" value="false"/>-->
+        <!--<property name="concurrentConsumers" value="10"/>-->
+    <!--</bean>-->
 
+    <!--<bean id="activemq"-->
+          <!--class="org.apache.activemq.camel.component.ActiveMQComponent">-->
+        <!--<property name="configuration" ref="jmsConfig"/>-->
+    <!--</bean>-->
 
 
 </beans>

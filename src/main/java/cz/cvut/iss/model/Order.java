@@ -1,6 +1,10 @@
 package cz.cvut.iss.model;
 
-import javax.xml.bind.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import java.util.List;
 
 /**
@@ -8,25 +12,14 @@ import java.util.List;
  * @since 28.09.15
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlRootElement
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Order {
-
-    @XmlTransient
-    private Long id;
 
     @XmlElement(required = true)
     private Address address;
 
     @XmlElement(required = true)
     private List<OrderItem> items;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public Address getAddress() {
         return address;

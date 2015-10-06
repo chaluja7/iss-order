@@ -9,6 +9,7 @@ import javax.xml.bind.JAXBException;
 import java.util.Random;
 import cz.cvut.iss.amq.util.XmlConverter;
 import cz.cvut.iss.model.Order;
+import cz.cvut.iss.model.ResolvedOrder;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 /**
@@ -41,10 +42,10 @@ public class Producer {
 	/**
 	 * Produces messages with. Each message contains job with random duration.
 	 *
-	 * @param order created Order
+	 * @param id created Order
 	 * @throws JMSException
 	 */
-	public void produceOrder(Order order) throws JMSException, JAXBException {
+	public void produceOrder(long id) throws JMSException, JAXBException {
 		Connection connection = null;
 		Session session;
 		try {
@@ -63,7 +64,8 @@ public class Producer {
 			// start connection
 			connection.start();
 
-			Message message = session.createTextMessage(XmlConverter.toXml(Order.class, order));
+//			Message message = session.createTextMessage(XmlConverter.toXml(ResolvedOrder.class, order));
+			Message message = session.createTextMessage("Order with id='" + id + "' sent to expedition.");
 //				System.out.println("Producer: sending: " + job.toString() + " to destination " + destinationName);
 
 			// synchronously send message
