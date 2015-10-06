@@ -102,7 +102,7 @@
         </dependency>
         <!-- AMQ end -->
 
-        <!-- XA transakce -->
+        <!-- XA -->
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
@@ -113,7 +113,6 @@
             <artifactId>org.osgi.compendium</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- XA transakce end -->
 
         <!-- Spring transaction dependencies -->
         <dependency>
@@ -142,6 +141,8 @@
             <groupId>org.apache.xbean</groupId>
             <artifactId>xbean-spring</artifactId>
             <version>${xbean-spring-version}</version>
+
+            <!-- XA end -->
         </dependency>
 
     </dependencies>
@@ -196,6 +197,7 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>cz.cvut.iss*</Export-Package>
+                        <!-- XA -->
                         <Import-Package> org.springframework.core,
                             org.apache.camel,
                             org.apache.camel.component.jms,
@@ -204,6 +206,7 @@
                             org.apache.activemq.pool,
                             org.apache.xbean.spring,
                             org.apache.commons.pool,*</Import-Package>
+                        <!-- XA end -->
                     </instructions>
                 </configuration>
             </plugin>

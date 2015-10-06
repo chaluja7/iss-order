@@ -60,7 +60,11 @@
 
         <route id="new-order">
             <from uri="direct:new-order" />
+
+            <!-- XA -->
             <transacted ref="XA_TX_REQUIRED" />
+            <!-- XA end -->
+
             <bean ref="exchangeProcessor" method="handleVipHeader"/>
             <log message="VIP: ${header.X-Els-Vip}"/>
             <onException>
@@ -134,13 +138,12 @@
             </setBody>
 
 
-            <!--<to uri="bean:orderRepository?method=sendOrderToExpedition" />-->
+            <!-- XA -->
             <transform>
                 <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
             </transform>
-            <!--<to uri="activemq:queue:expedition" pattern="InOnly" />-->
-            <!-- XA tr -->
             <to uri="jmstx:queue:expedition" />
+            <!-- XA end -->
 
         </route>
 
@@ -235,9 +238,7 @@
     <!--</http:conduit>-->
 
     <!--
-
-            XA transakce
-
+            XA
     -->
 
     <!--
@@ -304,38 +305,6 @@
     <bean id="XA_TX_REQUIRED" class="org.apache.camel.spring.spi.SpringTransactionPolicy">
         <property name="transactionManager" ref="osgiPlatformTransactionManager"/>
     </bean>
-
-
-    <!-- =============================== -->
-    <!--
-        Configure the activemq component:
-      -->
-    <!--<bean id="jmsConnectionFactory"-->
-          <!--class="org.apache.activemq.ActiveMQConnectionFactory">-->
-        <!--<property name="brokerURL" value="discovery:(fabric:masterslave)" />-->
-        <!--<property name="userName" value="admin"/>-->
-        <!--<property name="password" value="admin"/>-->
-        <!--&lt;!&ndash;<property name="trustStore" value="/conf/client.ts"/>&ndash;&gt;-->
-        <!--&lt;!&ndash;<property name="trustStorePassword" value="password"/>&ndash;&gt;-->
-    <!--</bean>-->
-
-    <!--<bean id="pooledConnectionFactory"-->
-          <!--class="org.apache.activemq.pool.PooledConnectionFactory">-->
-        <!--<property name="maxConnections" value="8" />-->
-        <!--&lt;!&ndash;<property name="maximumActive" value="500" />&ndash;&gt;-->
-        <!--<property name="connectionFactory" ref="jmsConnectionFactory" />-->
-    <!--</bean>-->
-
-    <!--<bean id="jmsConfig" class="org.apache.camel.component.jms.JmsConfiguration">-->
-        <!--<property name="connectionFactory" ref="pooledConnectionFactory"/>-->
-        <!--<property name="transacted" value="false"/>-->
-        <!--<property name="concurrentConsumers" value="10"/>-->
-    <!--</bean>-->
-
-    <!--<bean id="activemq"-->
-          <!--class="org.apache.activemq.camel.component.ActiveMQComponent">-->
-        <!--<property name="configuration" ref="jmsConfig"/>-->
-    <!--</bean>-->
-
+    <!-- XA end -->
 
 </beans>
