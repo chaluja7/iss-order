@@ -80,7 +80,6 @@
             <artifactId>log4j</artifactId>
         </dependency>
 
-
         <!-- AMQ -->
         <dependency>
             <groupId>javax.xml</groupId>
@@ -101,48 +100,6 @@
             <artifactId>camel-jms</artifactId>
         </dependency>
         <!-- AMQ end -->
-
-        <!-- XA transakce -->
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.compendium</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- XA transakce end -->
-
-        <!-- Spring transaction dependencies -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-            <version>${spring-version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>${spring-version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-tx</artifactId>
-            <version>${spring-version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-aop</artifactId>
-            <version>${spring-version}</version>
-        </dependency>
-
-        <!--  This is needed by the camel-jms component -->
-        <dependency>
-            <groupId>org.apache.xbean</groupId>
-            <artifactId>xbean-spring</artifactId>
-            <version>${xbean-spring-version}</version>
-        </dependency>
 
     </dependencies>
 
@@ -196,14 +153,7 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>cz.cvut.iss*</Export-Package>
-                        <Import-Package> org.springframework.core,
-                            org.apache.camel,
-                            org.apache.camel.component.jms,
-                            org.apache.activemq,
-                            org.apache.activemq.xbean,
-                            org.apache.activemq.pool,
-                            org.apache.xbean.spring,
-                            org.apache.commons.pool,*</Import-Package>
+                        <Import-Package>*</Import-Package>
                     </instructions>
                 </configuration>
             </plugin>
