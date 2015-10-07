@@ -3,7 +3,6 @@ package cz.cvut.iss.service;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.generated.supplierB.ItemRequest;
 import cz.cvut.iss.model.OrderItem;
-import cz.cvut.iss.model.ResolvedOrder;
 import org.apache.camel.ExchangeProperty;
 
 /**
@@ -16,15 +15,11 @@ public final class SupplierBService {
 
     public ItemRequest getAvailableRequest(@ExchangeProperty("orderId") long orderId) {
         try {
-            ResolvedOrder resolvedOrder = orderRepository.get(orderId);
-            //TODO jakubchalupa - opravdu jen prvni polozka?
-            OrderItem orderItem = resolvedOrder.getItems().get(0);
+            OrderItem orderItem = orderRepository.get(orderId).getItem();
 
             ItemRequest itemRequest = new ItemRequest();
-
             itemRequest.setAmount(orderItem.getCount());
             itemRequest.setSku(orderItem.getSku());
-
 
             return itemRequest;
         } catch (NoSuchOrderException e) {

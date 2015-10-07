@@ -2,11 +2,14 @@ package cz.cvut.iss.service;
 
 import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
+import cz.cvut.iss.model.AccountingOrder;
 import cz.cvut.iss.model.Order;
 import cz.cvut.iss.model.OrderItem;
 import cz.cvut.iss.model.ResolvedOrder;
 import org.apache.camel.ExchangeProperty;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,8 +27,8 @@ public final class OrderRepository implements OrderService {
         }
 
         ResolvedOrder resolvedOrder = new ResolvedOrder();
-        resolvedOrder.setItems(order.getItems());
-        resolvedOrder.setAddress(order.getAddress());
+        resolvedOrder.setItem(order.getItem().getClone());
+        resolvedOrder.setAddress(order.getAddress().getClone());
         resolvedOrder.setId(atomicLong.incrementAndGet());
         ORDERS.put(resolvedOrder.getId(), resolvedOrder);
 
@@ -44,20 +47,20 @@ public final class OrderRepository implements OrderService {
     /**
      * accounting nechce dostavat nektere property, proto tato metoda, ktera se techto atributu zbavi
      */
-    public ResolvedOrder getForAccounting(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+    public AccountingOrder getForAccounting(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
         ResolvedOrder resolvedOrder = this.get(id);
 
-        ResolvedOrder clone = resolvedOrder.getClone();
-        clone.setStatus(null);
-        clone.setTotalPrice(null);
-        if(clone.getItems() != null) {
-            for (OrderItem orderItem : clone.getItems()) {
-                orderItem.setSku(null);
-            }
+        AccountingOrder accountingOrder = new AccountingOrder();
+        accountingOrder.setId(resolvedOrder.getId());
+        accountingOrder.setAddress(resolvedOrder.getAddress().getClone());
 
-        }
+        List<OrderItem> orderItemList = new ArrayList<>();
+        OrderItem orderItemClone = resolvedOrder.getItem().getClone();
+        orderItemClone.setSku(null);
+        orderItemList.add(orderItemClone);
+        accountingOrder.setItems(orderItemList);
 
-        return clone;
+        return accountingOrder;
     }
 
     public void setTotalPrice(@ExchangeProperty("orderId") long id, @ExchangeProperty("orderTotalPrice") Long totalPrice) throws NoSuchOrderException {

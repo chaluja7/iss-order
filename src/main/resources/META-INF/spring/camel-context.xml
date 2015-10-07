@@ -89,10 +89,10 @@
             <!--ziskam udaje o cene itemu -->
             <to uri="bean:orderRepository?method=get" />
             <setProperty propertyName="orderItemsCount">
-                <simple>${body.itemsCount}</simple>
+                <simple>${body.item.count}</simple>
             </setProperty>
             <setProperty propertyName="itemPrice">
-                <simple>${body.itemPrice}</simple>
+                <simple>${body.item.unitPrice}</simple>
             </setProperty>
             <log message="items count - ${property.orderItemsCount}"/>
             <log message="item price - ${property.itemPrice}"/>

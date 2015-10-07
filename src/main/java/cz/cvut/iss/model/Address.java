@@ -74,11 +74,11 @@ public class Address implements Cloneable<Address> {
     @Override
     public Address getClone() {
         Address address = new Address();
-        address.setCity(this.getCity());
-        address.setFirstName(this.getFirstName());
-        address.setLastName(this.getLastName());
-        address.setStreet(this.getStreet());
-        address.setZipCode(this.getZipCode());
+        address.setCity(city);
+        address.setFirstName(firstName);
+        address.setLastName(lastName);
+        address.setStreet(street);
+        address.setZipCode(zipCode);
 
         return address;
     }

@@ -59,16 +59,16 @@ public class OrderItem implements Cloneable<OrderItem> {
     }
 
     public boolean isValid() {
-        return articleId != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
+        return articleId != null && sku != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
     }
 
     @Override
     public OrderItem getClone() {
         OrderItem orderItem = new OrderItem();
-        orderItem.setSku(this.getSku());
-        orderItem.setArticleId(this.getArticleId());
-        orderItem.setCount(this.getCount());
-        orderItem.setUnitPrice(this.getUnitPrice());
+        orderItem.setSku(sku);
+        orderItem.setArticleId(articleId);
+        orderItem.setCount(count);
+        orderItem.setUnitPrice(unitPrice);
 
         return orderItem;
     }

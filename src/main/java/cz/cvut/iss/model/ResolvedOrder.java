@@ -3,8 +3,6 @@ package cz.cvut.iss.model;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Resolved order - we do not want to have this fields generated in wsdl for create order.
@@ -51,19 +49,11 @@ public class ResolvedOrder extends Order implements Cloneable<ResolvedOrder> {
     @Override
     public ResolvedOrder getClone() {
         ResolvedOrder resolvedOrder = new ResolvedOrder();
-        resolvedOrder.setId(this.getId());
-        resolvedOrder.setTotalPrice(this.getTotalPrice());
-        if(this.getStatus() != null) resolvedOrder.setStatus(this.getStatus().getClone());
-        if(this.getAddress() != null) resolvedOrder.setAddress(this.getAddress().getClone());
-
-        if(this.getItems() != null) {
-            List<OrderItem> orderItems = new ArrayList<>();
-            for (OrderItem orderItem : this.getItems()) {
-                orderItems.add(orderItem.getClone());
-            }
-
-            resolvedOrder.setItems(orderItems);
-        }
+        resolvedOrder.setId(id);
+        resolvedOrder.setTotalPrice(totalPrice);
+        if(getStatus() != null) resolvedOrder.setStatus(status.getClone());
+        if(getAddress() != null) resolvedOrder.setAddress(getAddress().getClone());
+        if(getItem() != null) resolvedOrder.setItem(getItem().getClone());
 
         return resolvedOrder;
     }

@@ -37,7 +37,7 @@ public class OrderStatus implements Cloneable<OrderStatus> {
 
     @Override
     public OrderStatus getClone() {
-        return new OrderStatus(this.getResolution(), this.getDescription());
+        return new OrderStatus(resolution, description);
     }
 
 }
