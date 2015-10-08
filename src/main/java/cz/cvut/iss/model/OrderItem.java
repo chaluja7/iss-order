@@ -15,9 +15,6 @@ import javax.xml.bind.annotation.XmlElement;
 public class OrderItem implements Cloneable<OrderItem> {
 
     @XmlElement(required = true)
-    private Long articleId;
-
-    @XmlElement(required = true)
     private String sku;
 
     @XmlElement(required = true)
@@ -25,14 +22,6 @@ public class OrderItem implements Cloneable<OrderItem> {
 
     @XmlElement(required = true)
     private Double unitPrice;
-
-    public Long getArticleId() {
-        return articleId;
-    }
-
-    public void setArticleId(Long articleId) {
-        this.articleId = articleId;
-    }
 
     public String getSku() {
         return sku;
@@ -59,14 +48,13 @@ public class OrderItem implements Cloneable<OrderItem> {
     }
 
     public boolean isValid() {
-        return articleId != null && sku != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
+        return sku != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
     }
 
     @Override
     public OrderItem getClone() {
         OrderItem orderItem = new OrderItem();
         orderItem.setSku(sku);
-        orderItem.setArticleId(articleId);
         orderItem.setCount(count);
         orderItem.setUnitPrice(unitPrice);
 

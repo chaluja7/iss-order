@@ -20,7 +20,10 @@
         </camel:trustManagers>
     </camel:sslContextParameters>
 
-    <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository" />
+    <bean id="itemRepository" class="cz.cvut.iss.service.ItemRepository" />
+    <bean id="orderRepository" class="cz.cvut.iss.service.OrderRepository">
+        <property name="itemRepository" ref="itemRepository" />
+    </bean>
     <bean id="orderStatusProvider" class="cz.cvut.iss.service.OrderStatusProvider">
         <property name="orderRepository" ref="orderRepository" />
     </bean>
@@ -199,6 +202,7 @@
             <!-- vyjimky chci handlovat jen pro rest -->
             <onException>
                 <exception>cz.cvut.iss.exception.BadOrderBodyException</exception>
+                <exception>cz.cvut.iss.exception.NoSuchItemException</exception>
                 <handled>
                     <simple>${header.isRest}</simple>
                 </handled>

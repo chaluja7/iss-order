@@ -1,4 +1,6 @@
-package cz.cvut.iss.model;
+package cz.cvut.iss.model.accounting;
+
+import cz.cvut.iss.model.Address;
 
 import java.util.List;
 
@@ -14,7 +16,7 @@ public class AccountingOrder  {
 
     private Address address;
 
-    private List<OrderItem> items;
+    private List<AccountingItem> items;
 
     public Long getId() {
         return id;
@@ -32,11 +34,11 @@ public class AccountingOrder  {
         this.address = address;
     }
 
-    public List<OrderItem> getItems() {
+    public List<AccountingItem> getItems() {
         return items;
     }
 
-    public void setItems(List<OrderItem> items) {
+    public void setItems(List<AccountingItem> items) {
         this.items = items;
     }
 }

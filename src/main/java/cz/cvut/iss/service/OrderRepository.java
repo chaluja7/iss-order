@@ -1,11 +1,12 @@
 package cz.cvut.iss.service;
 
 import cz.cvut.iss.exception.BadOrderBodyException;
+import cz.cvut.iss.exception.NoSuchItemException;
 import cz.cvut.iss.exception.NoSuchOrderException;
-import cz.cvut.iss.model.AccountingOrder;
 import cz.cvut.iss.model.Order;
-import cz.cvut.iss.model.OrderItem;
 import cz.cvut.iss.model.ResolvedOrder;
+import cz.cvut.iss.model.accounting.AccountingItem;
+import cz.cvut.iss.model.accounting.AccountingOrder;
 import org.apache.camel.ExchangeProperty;
 
 import java.util.ArrayList;
@@ -16,14 +17,20 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class OrderRepository implements OrderService {
 
+    private ItemRepository itemRepository;
+
     private static final Map<Long, ResolvedOrder> ORDERS = new TreeMap<>();
 
     private static AtomicLong atomicLong = new AtomicLong(0);
 
     @Override
-    public long create(Order order) throws BadOrderBodyException{
+    public long create(Order order) throws BadOrderBodyException, NoSuchItemException {
         if(order == null || !order.isValid()) {
             throw new BadOrderBodyException(order);
+        }
+
+        if(!itemRepository.containsItemWithSku(order.getItem().getSku())) {
+            throw new NoSuchItemException(order.getItem().getSku());
         }
 
         ResolvedOrder resolvedOrder = new ResolvedOrder();
@@ -54,11 +61,14 @@ public final class OrderRepository implements OrderService {
         accountingOrder.setId(resolvedOrder.getId());
         accountingOrder.setAddress(resolvedOrder.getAddress().getClone());
 
-        List<OrderItem> orderItemList = new ArrayList<>();
-        OrderItem orderItemClone = resolvedOrder.getItem().getClone();
-        orderItemClone.setSku(null);
-        orderItemList.add(orderItemClone);
-        accountingOrder.setItems(orderItemList);
+        List<AccountingItem> accountingItems = new ArrayList<>();
+        AccountingItem accountingItem = new AccountingItem();
+        accountingItem.setArticleId(itemRepository.getItemIdForSku(resolvedOrder.getItem().getSku()));
+        accountingItem.setCount(resolvedOrder.getItem().getCount());
+        accountingItem.setUnitPrice(resolvedOrder.getItem().getUnitPrice());
+
+        accountingItems.add(accountingItem);
+        accountingOrder.setItems(accountingItems);
 
         return accountingOrder;
     }
@@ -72,6 +82,8 @@ public final class OrderRepository implements OrderService {
         atomicLong = new AtomicLong(0);
     }
 
-    private OrderRepository() {
+    public void setItemRepository(ItemRepository itemRepository) {
+        this.itemRepository = itemRepository;
     }
+
 }
