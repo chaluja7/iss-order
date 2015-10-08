@@ -219,9 +219,9 @@
                 <when>
                     <simple>${header.isRest}</simple>
                     <bean ref="exchangeProcessor" method="handleVipHeader"/>
-                    <log message="VIP: ${header.X-Els-Vip}"/>
                 </when>
             </choice>
+            <log message="VIP: ${header.X-Els-Vip}"/>
 
 
             <!-- vytvorim objednavku a nastavim propertu property.orderId - Id nove vytvorene objednavky -->
