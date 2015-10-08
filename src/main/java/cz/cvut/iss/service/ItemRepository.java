@@ -15,8 +15,8 @@ public final class ItemRepository {
         ITEMS_MAPPING = new HashMap<>();
 
         ITEMS_MAPPING.put("fedora", 1l);
-        ITEMS_MAPPING.put("rhel", 1l);
-        ITEMS_MAPPING.put("ubuntu", 1l);
+        ITEMS_MAPPING.put("rhel", 2l);
+        ITEMS_MAPPING.put("ubuntu", 3l);
     }
 
     public boolean containsItemWithSku(String sku) {
