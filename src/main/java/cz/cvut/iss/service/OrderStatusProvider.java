@@ -26,6 +26,10 @@ public final class OrderStatusProvider {
         setStatus(orderId, RESOLUTION_CANCELLED, "Items unavailable");
     }
 
+    public void cancelCauseAccounting(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
+        setStatus(orderId, RESOLUTION_CANCELLED, "Error while contacting accounting");
+    }
+
     public void account(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
         setStatus(orderId, RESOLUTION_ACCOUNTED, "The order is accounted");
     }

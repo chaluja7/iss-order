@@ -31,11 +31,13 @@
         <property name="orderRepository" ref="orderRepository" />
     </bean>
     <bean id="exchangeProcessor" class="cz.cvut.iss.processor.ExchangeProcessor" />
+    <bean id="accountingResponseException" class="cz.cvut.iss.exception.AccountingResponseException" />
 
     <camelContext xmlns="http://camel.apache.org/schema/spring">
-        <route id="orderHttpsPost">
+        <route id="orderRestHttpsPost">
             <from uri="restlet:https://localhost:8081/orders?restletMethod=post&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
 
+            <!-- pokud zadal spatny json nebo prazdne body requestu -->
             <onException>
                 <exception>java.io.IOException</exception>
                 <exception>org.apache.camel.InvalidPayloadException</exception>
@@ -50,26 +52,155 @@
                 </setBody>
             </onException>
 
+            <!-- konverze do objektu Order -->
             <convertBodyTo type="java.lang.String" />
             <unmarshal>
                 <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Order" />
             </unmarshal>
+
+            <setHeader headerName="isRest">
+                <constant>true</constant>
+            </setHeader>
             <to uri="direct:new-order"/>
         </route>
 
-        <route id="orderHttpsGet">
+        <route id="orderRestHttpsGet">
             <from uri="restlet:https://localhost:8081/orders/{orderId}?restletMethod=get&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
+            <setHeader headerName="isRest">
+                <constant>true</constant>
+            </setHeader>
             <to uri="direct:find-order"/>
+        </route>
+
+        <route id="supplierA">
+            <from uri="direct:supplier-a" />
+
+            <!-- musim dostat orderId do property -->
+            <setProperty propertyName="orderId">
+                <simple>${header.orderid}</simple>
+            </setProperty>
+
+            <!-- pred volanim odstranim hlavicky -->
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+
+            <to uri="bean:supplierAService?method=getAvailableRequest" />
+            <to uri="cxf:bean:supplier-a-ws"/>
+            <log message="response supplierA - ${body[0]}"/>
+
+            <!-- pokud je zbozi dostupne, tak se nasetuje do hlavicky supplierAItemPrice jeho cena (za kus) -->
+            <setHeader headerName="supplierAItemPrice">
+                <constant>null</constant>
+            </setHeader>
+            <log message="SupplierA item price before: ${header.supplierAItemPrice}" />
+            <choice>
+                <when>
+                    <simple>${body[0].available}</simple>
+                    <setHeader headerName="supplierAItemPrice">
+                        <simple>${body[0].price.longValue}</simple>
+                    </setHeader>
+                </when>
+            </choice>
+        </route>
+
+        <route id="supplierB">
+            <from uri="direct:supplier-b" />
+
+            <!-- musim dostat orderId do property -->
+            <setProperty propertyName="orderId">
+                <simple>${header.orderid}</simple>
+            </setProperty>
+
+            <!-- pred volanim odstranim hlavicky -->
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+
+            <to uri="bean:supplierBService?method=getAvailableRequest" />
+            <to uri="cxf:bean:supplier-b-ws"/>
+            <log message="response supplierB - ${body[0]}"/>
+
+            <!-- pokud je zbozi dostupne, tak se nasetuje do hlavicky supplierAItemPrice jeho cena (za kus) -->
+            <setHeader headerName="supplierBItemPrice">
+                <constant>null</constant>
+            </setHeader>
+            <log message="SupplierB item price before: ${header.supplierBItemPrice}" />
+            <choice>
+                <when>
+                    <simple>${body[0].available}</simple>
+                    <setHeader headerName="supplierBItemPrice">
+                        <simple>${body[0].price.longValue}</simple>
+                    </setHeader>
+                </when>
+            </choice>
+        </route>
+
+        <route id="accounting">
+            <from uri="direct:accounting" />
+
+            <!-- vyjimky chci handlovat jen pro rest -->
+            <onException>
+                <exception>java.lang.Exception</exception>
+                <handled>
+                    <simple>${header.isRest}</simple>
+                </handled>
+
+                <to uri="bean:orderStatusProvider?method=cancelCauseAccounting"/>
+
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>500</constant>
+                </setHeader>
+                <setBody>
+                    <constant>null</constant>
+                </setBody>
+            </onException>
+
+            <to uri="bean:orderRepository?method=getForAccounting" />
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
+
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+            <setHeader headerName="CamelHttpMethod">
+                <constant>POST</constant>
+            </setHeader>
+            <setHeader headerName="Content-Type">
+                <constant>application/json</constant>
+            </setHeader>
+
+            <to uri="https4://localhost:8443/accounting/rest/accounting/invoice/issue?sslContextParameters=#sslContextParametersWithoutAuthentication"/>
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+
+            <convertBodyTo type="java.lang.String"/>
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Invoice"/>
+            </unmarshal>
+
+            <choice>
+                <when>
+                    <simple>${body.status} == 'ISSUED'</simple>
+
+                    <to uri="bean:orderStatusProvider?method=account"/>
+
+                    <setProperty propertyName="orderTotalPrice">
+                        <simple>${body.order.totalPrice}</simple>
+                    </setProperty>
+
+                    <to uri="bean:orderRepository?method=setTotalPrice"/>
+                </when>
+                <otherwise>
+                    <throwException ref="accountingResponseException" />
+                </otherwise>
+            </choice>
+
+            <log message="Accounting complete - total price: ${body.order.totalPrice}" />
         </route>
 
         <route id="new-order">
             <from uri="direct:new-order" />
-            <bean ref="exchangeProcessor" method="handleVipHeader"/>
-            <log message="VIP: ${header.X-Els-Vip}"/>
+
+            <!-- vyjimky chci handlovat jen pro rest -->
             <onException>
                 <exception>cz.cvut.iss.exception.BadOrderBodyException</exception>
                 <handled>
-                    <constant>true</constant>
+                    <simple>${header.isRest}</simple>
                 </handled>
                 <setHeader headerName="CamelHttpResponseCode">
                     <constant>400</constant>
@@ -79,11 +210,26 @@
                 </setBody>
             </onException>
 
+            <!-- vyhandluju hlavicku VIP - bude v header.X-Els-Vip TODO - co u soapu?-->
+            <choice>
+                <when>
+                    <simple>${header.isRest}</simple>
+                    <bean ref="exchangeProcessor" method="handleVipHeader"/>
+                    <log message="VIP: ${header.X-Els-Vip}"/>
+                </when>
+            </choice>
+
+
+            <!-- vytvorim objednavku a nastavim propertu property.orderId - Id nove vytvorene objednavky -->
             <to uri="bean:orderRepository?method=create" />
             <setProperty propertyName="orderId">
                 <simple>${body}</simple>
             </setProperty>
+            <!-- nove objednavce nastavim stav inProcess -->
             <to uri="bean:orderStatusProvider?method=inProcess" />
+
+            <!--TODO zde bude dotaz na lokalni sklad - JDBC -->
+
 
             <!--dotazy na externi sklady-->
             <!--ziskam udaje o cene itemu -->
@@ -97,99 +243,57 @@
             <log message="items count - ${property.orderItemsCount}"/>
             <log message="item price - ${property.itemPrice}"/>
 
-            <removeHeaders pattern="*"/>
+            <!-- musim nastavit orderId do headeru, aby se propagovalo -->
+            <setHeader headerName="orderId">
+                <simple>${property.orderId}</simple>
+            </setHeader>
 
             <!--SUPPLIER A-->
-            <to uri="bean:supplierAService?method=getAvailableRequest" />
-            <to uri="cxf:bean:supplier-a-ws"/>
-            <log message="response supplierA - ${body[0]}"/>
-
-            <setProperty propertyName="supplierAItemPrice">
-                <constant>null</constant>
-            </setProperty>
-            <log message="SupplierA item price before: ${property.supplierAItemPrice}" />
-            <choice>
-                <when>
-                    <simple>${body[0].available}</simple>
-                    <setProperty propertyName="supplierAItemPrice">
-                        <simple>${body[0].price.longValue}</simple>
-                    </setProperty>
-                </when>
-            </choice>
-            <log message="SupplierA item price after: ${property.supplierAItemPrice}" />
+            <to uri="direct:supplier-a"/>
+            <log message="SupplierA item price after: ${header.supplierAItemPrice}" />
 
             <!--SUPPLIER B-->
-            <to uri="bean:supplierBService?method=getAvailableRequest" />
-            <to uri="cxf:bean:supplier-b-ws"/>
-            <log message="response supplierB - ${body[0]}"/>
+            <to uri="direct:supplier-b"/>
+            <log message="SupplierB item price after: ${header.supplierBItemPrice}" />
 
-            <setProperty propertyName="supplierBItemPrice">
-                <constant>null</constant>
-            </setProperty>
-            <log message="SupplierB item price before: ${property.supplierBItemPrice}" />
-            <choice>
-                <when>
-                    <simple>${body[0].available}</simple>
-                    <setProperty propertyName="supplierBItemPrice">
-                        <simple>${body[0].price.longValue}</simple>
-                    </setProperty>
-                </when>
-            </choice>
-            <log message="SupplierB item price after: ${property.supplierBItemPrice}" />
             <!--END dotazy na externi sklady-->
 
-
             <!--ACCOUNTING-->
-            <to uri="bean:orderRepository?method=getForAccounting" />
-            <marshal>
-                <json library="Jackson"/>
-            </marshal>
-            <setHeader headerName="CamelHttpMethod">
-                <constant>POST</constant>
-            </setHeader>
-            <setHeader headerName="Content-Type">
-                <constant>application/json</constant>
-            </setHeader>
-            <to uri="https4://localhost:8443/accounting/rest/accounting/invoice/issue?sslContextParameters=#sslContextParametersWithoutAuthentication"/>
-            <removeHeaders pattern="*"/><!-- important, wont work if missing -->
-            <convertBodyTo type="java.lang.String"/>
-            <unmarshal>
-                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Invoice"/>
-            </unmarshal>
+            <to uri="direct:accounting"/>
+
+            <!--FINAL RESPONSE-->
+            <removeHeaders pattern="*" excludePattern="isRest" />
             <choice>
                 <when>
-                    <simple>${body.status} == 'ISSUED'</simple>
-                    <to uri="bean:orderStatusProvider?method=account"/>
-                    <setProperty propertyName="orderTotalPrice">
-                        <simple>${body.order.totalPrice}</simple>
-                    </setProperty>
-                    <to uri="bean:orderRepository?method=setTotalPrice"/>
+                    <simple>${header.isRest}</simple>
+
                     <setHeader headerName="CamelHttpResponseCode">
                         <constant>201</constant>
                     </setHeader>
-                    <log message="Accounting complete - total price: ${body.order.totalPrice}" />
+                    <setHeader headerName="Location">
+                        <simple>/orders/${property.orderId}</simple>
+                    </setHeader>
+                    <setBody>
+                        <constant>null</constant>
+                    </setBody>
                 </when>
                 <otherwise>
-                    <to uri="bean:orderStatusProvider?method=cancel"/>
-                    <setHeader headerName="CamelHttpResponseCode">
-                        <constant>406</constant>
-                    </setHeader>
+                    <setBody>
+                        <simple>${property.orderId}</simple>
+                    </setBody>
                 </otherwise>
             </choice>
-            <setHeader headerName="Location">
-                <simple>/orders/${property.orderId}</simple>
-            </setHeader>
-            <setBody>
-                <constant>null</constant>
-            </setBody>
         </route>
 
+        <!-- najde a vratio objednavku dle id, ktere musi byt v header.orderId -->
         <route id="find-order">
             <from uri="direct:find-order"/>
+
+            <!-- vyjimky chci handlovat pouze pro rest -->
             <onException>
                 <exception>cz.cvut.iss.exception.NoSuchOrderException</exception>
                 <handled>
-                    <constant>true</constant>
+                    <simple>${header.isRest}</simple>
                 </handled>
                 <setHeader headerName="CamelHttpResponseCode">
                     <constant>404</constant>
@@ -198,30 +302,22 @@
                     <constant>null</constant>
                 </setBody>
             </onException>
+
+            <!--vytahnu order dle ID -->
             <setProperty propertyName="orderId">
                 <simple>${header.orderId}</simple>
             </setProperty>
             <to uri="bean:orderRepository?method=get"/>
-            <marshal>
-                <json library="Jackson"/>
-            </marshal>
-        </route>
 
-        <route id="soap-find-order">
-            <from uri="direct:soap-find-order"/>
-            <setProperty propertyName="orderId">
-                <simple>${header.orderId}</simple>
-            </setProperty>
-            <to uri="bean:orderRepository?method=get"/>
-        </route>
-
-        <route id="soap-new-order">
-            <from uri="direct:soap-new-order"/>
-            <to uri="bean:orderRepository?method=create"/>
-            <setProperty propertyName="orderId">
-                <simple>${body}</simple>
-            </setProperty>
-            <to uri="bean:orderStatusProvider?method=inProcess"/>
+            <!-- pro rest chci marshallovat pomoci jacksonu -->
+            <choice>
+                <when>
+                    <simple>${header.isRest}</simple>
+                    <marshal>
+                        <json library="Jackson"/>
+                    </marshal>
+                </when>
+            </choice>
         </route>
 
         <route id="cxf-order-ws">
@@ -232,11 +328,11 @@
                     <setHeader headerName="orderId">
                         <simple>${body[0]}</simple>
                     </setHeader>
-                    <to uri="direct:soap-find-order"/>
+                    <to uri="direct:find-order"/>
                 </when>
                 <when>
                     <simple>${in.header.operationName} == 'create'</simple>
-                    <to uri="direct:soap-new-order"/>
+                    <to uri="direct:new-order"/>
                 </when>
             </choice>
 
