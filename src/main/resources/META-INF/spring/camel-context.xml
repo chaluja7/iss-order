@@ -137,11 +137,11 @@
             </setBody>
             <to uri="jdbc:inventoryDB"/>
 
-            <!--<to uri="bean:orderRepository?method=sendOrderToExpedition" />-->
-            <transform>
-                <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
-            </transform>
-            <to uri="activemq:queue:expedition" pattern="InOnly" />
+            <!--&lt;!&ndash;<to uri="bean:orderRepository?method=sendOrderToExpedition" />&ndash;&gt;-->
+            <!--<transform>-->
+                <!--<simple>Order with id='${property.orderId}' was sent to expedition.</simple>-->
+            <!--</transform>-->
+            <!--<to uri="activemq:queue:expedition" pattern="InOnly" />-->
 
 
 
@@ -242,32 +242,32 @@
     AMQ
         Configure the activemq component:
       -->
-    <bean id="jmsConnectionFactory"
-          class="org.apache.activemq.ActiveMQConnectionFactory">
-        <property name="brokerURL" value="discovery:(fabric:masterslave)" />
-        <property name="userName" value="admin"/>
-        <property name="password" value="admin"/>
-        <!--<property name="trustStore" value="/conf/client.ts"/>-->
-        <!--<property name="trustStorePassword" value="password"/>-->
-    </bean>
+    <!--<bean id="jmsConnectionFactory"-->
+          <!--class="org.apache.activemq.ActiveMQConnectionFactory">-->
+        <!--<property name="brokerURL" value="discovery:(fabric:masterslave)" />-->
+        <!--<property name="userName" value="admin"/>-->
+        <!--<property name="password" value="admin"/>-->
+        <!--&lt;!&ndash;<property name="trustStore" value="/conf/client.ts"/>&ndash;&gt;-->
+        <!--&lt;!&ndash;<property name="trustStorePassword" value="password"/>&ndash;&gt;-->
+    <!--</bean>-->
 
-    <bean id="pooledConnectionFactory"
-          class="org.apache.activemq.pool.PooledConnectionFactory">
-        <property name="maxConnections" value="8" />
-        <!--<property name="maximumActive" value="500" />-->
-        <property name="connectionFactory" ref="jmsConnectionFactory" />
-    </bean>
+    <!--<bean id="pooledConnectionFactory"-->
+          <!--class="org.apache.activemq.pool.PooledConnectionFactory">-->
+        <!--<property name="maxConnections" value="8" />-->
+        <!--&lt;!&ndash;<property name="maximumActive" value="500" />&ndash;&gt;-->
+        <!--<property name="connectionFactory" ref="jmsConnectionFactory" />-->
+    <!--</bean>-->
 
-    <bean id="jmsConfig" class="org.apache.camel.component.jms.JmsConfiguration">
-        <property name="connectionFactory" ref="pooledConnectionFactory"/>
-        <property name="transacted" value="false"/>
-        <property name="concurrentConsumers" value="10"/>
-    </bean>
+    <!--<bean id="jmsConfig" class="org.apache.camel.component.jms.JmsConfiguration">-->
+        <!--<property name="connectionFactory" ref="pooledConnectionFactory"/>-->
+        <!--<property name="transacted" value="false"/>-->
+        <!--<property name="concurrentConsumers" value="10"/>-->
+    <!--</bean>-->
 
-    <bean id="activemq"
-          class="org.apache.activemq.camel.component.ActiveMQComponent">
-        <property name="configuration" ref="jmsConfig"/>
-    </bean>
+    <!--<bean id="activemq"-->
+          <!--class="org.apache.activemq.camel.component.ActiveMQComponent">-->
+        <!--<property name="configuration" ref="jmsConfig"/>-->
+    <!--</bean>-->
 
     <!-- AMQ end -->
 
