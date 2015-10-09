@@ -13,12 +13,13 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ResolvedOrder extends Order {
-
-    private Long totalPrice;
+public class ResolvedOrder extends Order implements Cloneable<ResolvedOrder> {
 
     @XmlElement
     private Long id;
+
+    @XmlElement
+    private Long totalPrice;
 
     @XmlElement
     private OrderStatus status;
@@ -46,4 +47,17 @@ public class ResolvedOrder extends Order {
     public void setTotalPrice(Long totalPrice) {
         this.totalPrice = totalPrice;
     }
+
+    @Override
+    public ResolvedOrder getClone() {
+        ResolvedOrder resolvedOrder = new ResolvedOrder();
+        resolvedOrder.setId(id);
+        resolvedOrder.setTotalPrice(totalPrice);
+        if(getStatus() != null) resolvedOrder.setStatus(status.getClone());
+        if(getAddress() != null) resolvedOrder.setAddress(getAddress().getClone());
+        if(getItem() != null) resolvedOrder.setItem(getItem().getClone());
+
+        return resolvedOrder;
+    }
+
 }
