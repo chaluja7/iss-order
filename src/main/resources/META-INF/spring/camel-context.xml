@@ -225,7 +225,6 @@
             </choice>
             <log message="VIP: ${header.X-Els-Vip}"/>
 
-
             <!-- vytvorim objednavku a nastavim propertu property.orderId - Id nove vytvorene objednavky -->
             <to uri="bean:orderRepository?method=create" />
             <setProperty propertyName="orderId">
@@ -235,11 +234,15 @@
             <to uri="bean:orderStatusProvider?method=inProcess" />
 
             <!--TODO zde bude dotaz na lokalni sklad - JDBC -->
+            <to uri="bean:orderRepository?method=get" />
+            <setProperty propertyName="itemId">
+                <simple>${body.item.sku}</simple>
+            </setProperty>
             <setBody>
-                <constant>select * from item</constant>
+                <simple>select * from item</simple>
             </setBody>
             <to uri="jdbc:inventoryDB"/>
-
+            <log message="item ID (SKU) - ${property.itemId}"/>
 
             <!--dotazy na externi sklady-->
             <!--ziskam udaje o cene itemu -->

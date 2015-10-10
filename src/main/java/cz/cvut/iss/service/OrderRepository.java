@@ -5,6 +5,7 @@ import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchItemException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
+import cz.cvut.iss.model.OrderItem;
 import cz.cvut.iss.model.ResolvedOrder;
 import cz.cvut.iss.model.accounting.AccountingItem;
 import cz.cvut.iss.model.accounting.AccountingOrder;
@@ -74,6 +75,11 @@ public final class OrderRepository implements OrderService {
         accountingOrder.setItems(accountingItems);
 
         return accountingOrder;
+    }
+
+    public OrderItem getForInventory(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+        ResolvedOrder resolvedOrder = this.get(id);
+        return resolvedOrder.getItem();
     }
 
     public void setTotalPrice(@ExchangeProperty("orderId") long id, @ExchangeProperty("orderTotalPrice") Long totalPrice) throws NoSuchOrderException {
