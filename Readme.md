@@ -55,13 +55,11 @@
         "city" : "Brno",
         "zipCode" : "61200"
     },
-    "items" : [
-        {
-            "articleId" : "6",
-            "count" : "1",
-            "unitPrice" : "4.4"
-        }
-    ]
+    "item" : {
+      "sku" : "rhel",
+      "count" : "1",
+      "unitPrice" : "4.4"
+    }
   }
   ```
   
