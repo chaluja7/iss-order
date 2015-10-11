@@ -132,8 +132,6 @@
                 <constant>null</constant>
             </setBody>
 
-
-            <!--<to uri="bean:orderRepository?method=sendOrderToExpedition" />-->
             <transform>
                 <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
             </transform>

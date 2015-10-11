@@ -1,6 +1,5 @@
 package cz.cvut.iss.service;
 
-import cz.cvut.iss.amq.Producer;
 import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
@@ -31,8 +30,6 @@ public final class OrderRepository implements OrderService {
         resolvedOrder.setId(atomicLong.incrementAndGet());
         ORDERS.put(resolvedOrder.getId(), resolvedOrder);
 
-//        sendOrderToExpedition(resolvedOrder);
-
         return resolvedOrder.getId();
     }
 
@@ -55,10 +52,5 @@ public final class OrderRepository implements OrderService {
     }
 
     private OrderRepository() {
-    }
-
-    public void sendOrderToExpedition(@ExchangeProperty("orderId") long id) throws JAXBException, JMSException {
-        Producer producer = new Producer();
-        producer.produceOrder(id);
     }
 }
