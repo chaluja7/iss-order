@@ -74,6 +74,31 @@
 * WSDL na adrese: ``https://localhost:9181/orderApplication/order?wsdl``
 * Např. přes SOAP-UI (http://www.soapui.org/) vytvořit nový projekt, naimportovat WDSL a nechat si vygenerovat dotazy (create a get)
 
+###Fabric - AMQ###
+* nastartuje fabric ve fuse: 
+
+  ``fabric:create``
+  
+  mozna bude potreba:
+  
+  ``fabric:profile-edit --feature camel-http4/0.0.0 fabric``
+  
+  ``fabric:profile-edit --feature camel-jackson/0.0.0 fabric``
+  
+  ``fabric:profile-edit --feature camel-restlet/0.0.0 fabric``
+* vytvori 2 containery v MasterSlave topologii s persistentnim ulozistem ve slozce '/persistent-storage' a skupinou 'masterslave':
+
+  ``mq-create --create-container broker --replicas 2 --data /persistent-storage --group masterslave hq-broker``
+* vytvori consumera z example-mq-consumer: (opt.)
+
+  ``container-create-child --profile mq-client-masterslave --profile example-mq-consumer root consumer``
+* v hawtio: Wiki / profiles / example / mq / consumer - zmenit destination na: (opt.)
+
+  ``destination=queue://expedition``
+* nastartuje child-instance:
+
+  ``$FUSE_HOME/bin/client container-start [ broker | broker2 | consumer ]``
+
 ##APIMAN##
 * run: ``docker run -it --net="host" -p 5080:5080 -p 5443:5443 -p 5990:5990 udrzalv/orders-apiman ``
 * apiman admin konzole: ``localhost:5080/apimanui``
