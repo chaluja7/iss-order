@@ -1,6 +1,5 @@
 package cz.cvut.iss.service;
 
-import cz.cvut.iss.amq.Producer;
 import cz.cvut.iss.exception.BadOrderBodyException;
 import cz.cvut.iss.exception.NoSuchItemException;
 import cz.cvut.iss.exception.NoSuchOrderException;
@@ -11,10 +10,7 @@ import cz.cvut.iss.model.accounting.AccountingItem;
 import cz.cvut.iss.model.accounting.AccountingOrder;
 import org.apache.camel.ExchangeProperty;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class OrderRepository implements OrderService {
@@ -40,8 +36,6 @@ public final class OrderRepository implements OrderService {
         resolvedOrder.setAddress(order.getAddress().getClone());
         resolvedOrder.setId(atomicLong.incrementAndGet());
         ORDERS.put(resolvedOrder.getId(), resolvedOrder);
-
-//        sendOrderToExpedition(resolvedOrder);
 
         return resolvedOrder.getId();
     }
@@ -93,6 +87,20 @@ public final class OrderRepository implements OrderService {
 
     public void setItemRepository(ItemRepository itemRepository) {
         this.itemRepository = itemRepository;
+    }
+
+
+    /**
+     * Generates a new order structured as a {@link Map}
+     */
+    public Map<String, Object> generateOrderItem(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+        ResolvedOrder resolvedOrder = this.get(id);
+        OrderItem o = resolvedOrder.getItem();
+        Map<String, Object> answer = new HashMap<String, Object>();
+        answer.put("sku", o.getSku());
+        answer.put("count", o.getCount());
+        answer.put("price", o.getUnitPrice());
+        return answer;
     }
 
 }

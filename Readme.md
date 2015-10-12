@@ -55,13 +55,11 @@
         "city" : "Brno",
         "zipCode" : "61200"
     },
-    "items" : [
-        {
-            "articleId" : "6",
-            "count" : "1",
-            "unitPrice" : "4.4"
-        }
-    ]
+    "item" : {
+      "sku" : "rhel",
+      "count" : "1",
+      "unitPrice" : "4.4"
+    }
   }
   ```
   
@@ -74,7 +72,6 @@
 * WSDL na adrese: ``https://localhost:9181/orderApplication/order?wsdl``
 * Např. přes SOAP-UI (http://www.soapui.org/) vytvořit nový projekt, naimportovat WDSL a nechat si vygenerovat dotazy (create a get)
 
-<<<<<<< HEAD
 ###Fabric - AMQ###
 * nastartuje fabric ve fuse: 
 
@@ -82,23 +79,34 @@
   
   mozna bude potreba:
   
-  ``fabric:profile-edit --feature camel-http4/0.0.0 root``
+  ``fabric:profile-edit --feature camel-http4/0.0.0 fabric``
   
-  ``fabric:profile-edit --feature camel-jackson/0.0.0 root``
+  ``fabric:profile-edit --feature camel-jackson/0.0.0 fabric``
   
-  ``fabric:profile-edit --feature camel-restlet/0.0.0 root``
+  ``fabric:profile-edit --feature camel-restlet/0.0.0 fabric``
+  
 * vytvori 2 containery v MasterSlave topologii s persistentnim ulozistem ve slozce '/persistent-storage' a skupinou 'masterslave':
 
   ``mq-create --create-container broker --replicas 2 --data /persistent-storage --group masterslave hq-broker``
+
 * vytvori consumera z example-mq-consumer: (opt.)
 
   ``container-create-child --profile mq-client-masterslave --profile example-mq-consumer root consumer``
+
 * v hawtio: Wiki / profiles / example / mq / consumer - zmenit destination na: (opt.)
 
   ``destination=queue://expedition``
+
 * nastartuje child-instance:
 
   ``$FUSE_HOME/bin/client container-start [ broker | broker2 | consumer ]``
+
+###DB###
+* ``osgi:install...`` jdou mozna nahradit ``fabric:profile-edit --feature...`` podobne jako camel-sql
+* ``osgi:install -s mvn:commons-dbcp/commons-dbcp/1.4``
+* ``osgi:install -s mvn:org.osgi/org.osgi.service.jdbc/1.0.0``
+* ``osgi:install -s mvn:com.h2database/h2/1.3.173``
+* ``fabric:profile-edit --feature camel-sql/0.0.0 fabric``
 
 ##APIMAN##
 * run: ``docker run -it --net="host" -p 5080:5080 -p 5443:5443 -p 5990:5990 udrzalv/orders-apiman ``

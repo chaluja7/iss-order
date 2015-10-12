@@ -121,6 +121,13 @@
             <artifactId>org.osgi.service.jdbc</artifactId>
             <version>1.0.0</version>
         </dependency>
+
+        <!-- sql endpoints  -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-sql</artifactId>
+        </dependency>
+
         <!-- JDBC end -->
 
     </dependencies>
