@@ -100,6 +100,7 @@
 ##APIMAN##
 * run: ``docker run -it --net="host" -p 5080:5080 -p 5443:5443 -p 5990:5990 udrzalv/orders-apiman ``
 * apiman admin konzole: ``localhost:5080/apimanui``
+* apiman login: ``admin/admin123!``
 * header for key: ``X-API-Key``
 
 ###REST###
