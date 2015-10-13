@@ -3,6 +3,7 @@ package cz.cvut.iss.model;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * Resolved order - we do not want to have this fields generated in wsdl for create order.
@@ -10,6 +11,7 @@ import javax.xml.bind.annotation.XmlElement;
  * @author jakubchalupa
  * @since 04.10.15
  */
+@XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ResolvedOrder extends Order implements Cloneable<ResolvedOrder> {
 

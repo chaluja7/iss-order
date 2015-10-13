@@ -6,11 +6,13 @@ import cz.cvut.iss.exception.NoSuchOrderException;
 import cz.cvut.iss.model.Order;
 import cz.cvut.iss.model.ResolvedOrder;
 
+import javax.jms.JMSException;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebResult;
 import javax.jws.WebService;
 import javax.jws.soap.SOAPBinding;
+import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 /**
