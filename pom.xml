@@ -20,6 +20,8 @@
 
         <spring-version>3.0.5.RELEASE</spring-version>
         <xbean-spring-version>3.5</xbean-spring-version>
+
+        <!--<osgi-import-pkg>*</osgi-import-pkg>-->
     </properties>
 
     <dependencyManagement>
@@ -101,6 +103,33 @@
         </dependency>
         <!-- AMQ end -->
 
+        <!-- JDBC  -->
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>1.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.3.173</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.jdbc</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- sql endpoints  -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-sql</artifactId>
+        </dependency>
+
+        <!-- JDBC end -->
+
     </dependencies>
 
     <profiles>
@@ -153,9 +182,7 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>cz.cvut.iss*</Export-Package>
-                        <Import-Package>
-                            *
-                        </Import-Package>
+                        <Import-Package>org.h2,*</Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

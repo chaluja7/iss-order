@@ -10,8 +10,6 @@
          http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
          http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd
          http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd
-         http://www.springframework.org/schema/osgi
-         http://www.springframework.org/schema/osgi/spring-osgi-1.2.xsd
          ">
 
     <camel:sslContextParameters id="sslContextParametersWithoutAuthentication">
@@ -41,6 +39,10 @@
 
 
     <camelContext xmlns="http://camel.apache.org/schema/spring">
+
+        <!-- use Camel property placeholder loaded from the given file -->
+        <propertyPlaceholder id="placeholder" location="classpath:sql.properties"/>
+
         <route id="orderRestHttpsPost">
             <from uri="restlet:https://localhost:8081/orders?restletMethod=post&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
 
@@ -227,7 +229,6 @@
             </choice>
             <log message="VIP: ${header.X-Els-Vip}"/>
 
-
             <!-- vytvorim objednavku a nastavim propertu property.orderId - Id nove vytvorene objednavky -->
             <to uri="bean:orderRepository?method=create" />
             <setProperty propertyName="orderId">
@@ -237,18 +238,58 @@
             <to uri="bean:orderStatusProvider?method=inProcess" />
 
             <!--TODO zde bude dotaz na lokalni sklad - JDBC -->
-
-
-            <!--dotazy na externi sklady-->
-            <!--ziskam udaje o cene itemu -->
+            <!-- JDBC -->
             <to uri="bean:orderRepository?method=get" />
-            <setProperty propertyName="orderItemsCount">
+            <!-- nastaveni properties, protoze dotaz do DB prepise body -->
+            <setProperty propertyName="itemId">
+                <simple>${body.item.sku}</simple>
+            </setProperty>
+            <setProperty propertyName="itemCount">
                 <simple>${body.item.count}</simple>
             </setProperty>
             <setProperty propertyName="itemPrice">
                 <simple>${body.item.unitPrice}</simple>
             </setProperty>
-            <log message="items count - ${property.orderItemsCount}"/>
+            <!-- vygeneruje Map pro DB query -->
+            <transform>
+                <method ref="orderRepository" method="generateOrderItem"/>
+            </transform>
+            <!-- DB NamedQueries v resources/sql.properties -->
+            <!-- decrementuje count u vyrobku o :count -->
+            <!--<to uri="sql:{{sql.decrementCountForSKU}}"/>-->
+            <!-- incrementuje count u vyrobku o :count -->
+            <!--<to uri="sql:{{sql.incrementCountForSKU}}"/>-->
+            <!-- vysledek query namapuje na outputClass (pouzije dostupne settery podle sloupcu),
+            potreba prazdny konstruktor  -->
+            <to uri="sql:{{sql.getItemForSKU}}?outputClass=cz.cvut.iss.model.OrderItem"/>
+            <log message="XXX: DB item: ${body}"/>
+            <when>
+                <!-- dostupna OrderItem z DB; asi by to chtelo robustnejsi kontrolu? -->
+                <simple>${body} != '[]' &amp;&amp; ${body[0].isPresent}</simple>
+                <log message="XXX: DB item: ${body[0].sku}, ${body[0].unitPrice}, ${body[0].count}"/>
+                <!-- podle vysledku metody isPresent =(return count > 0;) lze rozhodnout
+                'zdali je výrobek k dispozici'
+                 -->
+                <log message="XXX: DB item present: ${body[0].isPresent}"/>
+            </when>
+            <!-- otherwise proslo i pokud prosla prvni podminka, takto uz ne -->
+            <when>
+                <simple>${body} == '[]'</simple>
+                <!-- nedostupna OrderItem z DB -->
+                <log message="XXX: Item for '${property.itemId}' is not in DB."/>
+            </when>
+            <!-- JDBC end -->
+
+            <!--dotazy na externi sklady-->
+            <!--ziskam udaje o cene itemu -->
+            <to uri="bean:orderRepository?method=get" />
+            <!--<setProperty propertyName="orderItemsCount">-->
+                <!--<simple>${body.item.count}</simple>-->
+            <!--</setProperty>-->
+            <!--<setProperty propertyName="itemPrice">-->
+                <!--<simple>${body.item.unitPrice}</simple>-->
+            <!--</setProperty>-->
+            <log message="items count - ${property.itemCount}"/>
             <log message="item price - ${property.itemPrice}"/>
 
             <!-- musim nastavit orderId do headeru, aby se propagovalo -->
@@ -296,7 +337,6 @@
                 <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
             </transform>
             <to uri="activemq:queue:expedition" pattern="InOnly" />
-
         </route>
 
         <!-- najde a vratio objednavku dle id, ktere musi byt v header.orderId -->
@@ -415,8 +455,6 @@
         <property name="brokerURL" value="discovery:(fabric:masterslave)" />
         <property name="userName" value="admin"/>
         <property name="password" value="admin"/>
-        <!--<property name="trustStore" value="/conf/client.ts"/>-->
-        <!--<property name="trustStorePassword" value="password"/>-->
     </bean>
 
     <bean id="pooledConnectionFactory"
@@ -439,5 +477,21 @@
 
     <!-- AMQ end -->
 
+    <!-- JDBC -->
+
+    <bean id="inventoryDB" class="org.apache.commons.dbcp.BasicDataSource"
+          destroy-method="close">
+        <property name="driverClassName" value="org.h2.Driver"/>
+        <property name="url" value="jdbc:h2:tcp://localhost/~/exam"/>
+        <property name="username" value="sa"/>
+        <property name="password" value="sa"/>
+    </bean>
+
+    <!-- configure the Camel SQL component to use the JDBC data source -->
+    <bean id="sql" class="org.apache.camel.component.sql.SqlComponent">
+        <property name="dataSource" ref="inventoryDB"/>
+    </bean>
+
+    <!-- JDBC end -->
 
 </beans>

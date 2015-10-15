@@ -51,6 +51,14 @@ public class OrderItem implements Cloneable<OrderItem> {
         return sku != null && count != null && count > 0 && unitPrice != null && unitPrice >= 0;
     }
 
+    // pro sql outputClass
+    public OrderItem() {
+    }
+
+    public boolean isPresent() {
+        return count > 0;
+    }
+
     @Override
     public OrderItem getClone() {
         OrderItem orderItem = new OrderItem();
