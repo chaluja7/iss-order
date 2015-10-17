@@ -186,6 +186,21 @@
                 </setBody>
             </onException>
 
+            <onException>
+                <exception>java.lang.Exception</exception>
+                <handled>
+                    <simple>${header.isRest}</simple>
+                </handled>
+
+                <to uri="bean:orderStatusProvider?method=cancel" />
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>500</constant>
+                </setHeader>
+                <setBody>
+                    <simple>null</simple>
+                </setBody>
+            </onException>
+
             <!-- vyhandluju hlavicku VIP - bude v header.X-Els-Vip TODO - co u soapu?-->
             <choice>
                 <when>
@@ -378,13 +393,18 @@
             </transform>
             <to uri="activemq:queue:expedition" pattern="InOnly" />
 
-            <!--TODO snizeni stavu skladu-->
             <!--SNIZENI STAVU zasob na skladu, pokud byla polozka lokalne k dispozici-->
-            <!-- decrementuje count u vyrobku o :count -->
-            <!--<to uri="sql:{{sql.decrementCountForSKU}}"/>-->
-            <!-- incrementuje count u vyrobku o :count -->
-            <!--<to uri="sql:{{sql.incrementCountForSKU}}"/>-->
+            <when>
+                <simple>${property.itemAvailableInLocalStore}</simple>
 
+                <!-- vygeneruje Map pro DB query -->
+                <transform>
+                    <method ref="orderRepository" method="generateOrderItemInfoMap"/>
+                </transform>
+
+                <!-- decrementuje count u vyrobku o :count -->
+                <to uri="sql:{{sql.decrementCountForSKU}}"/>
+            </when>
 
             <!--FINAL RESPONSE-->
             <choice>
