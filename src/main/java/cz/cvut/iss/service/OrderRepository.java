@@ -80,27 +80,22 @@ public final class OrderRepository implements OrderService {
         get(id).setTotalPrice(totalPrice);
     }
 
-    public static void clear() {
-        ORDERS.clear();
-        atomicLong = new AtomicLong(0);
-    }
-
-    public void setItemRepository(ItemRepository itemRepository) {
-        this.itemRepository = itemRepository;
-    }
-
-
     /**
      * Generates a new order structured as a {@link Map}
      */
-    public Map<String, Object> generateOrderItem(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+    public Map<String, Object> generateOrderItemInfoMap(@ExchangeProperty("orderId") long id) throws NoSuchOrderException {
         ResolvedOrder resolvedOrder = this.get(id);
         OrderItem o = resolvedOrder.getItem();
-        Map<String, Object> answer = new HashMap<String, Object>();
+
+        Map<String, Object> answer = new HashMap<>();
         answer.put("sku", o.getSku());
         answer.put("count", o.getCount());
         answer.put("price", o.getUnitPrice());
         return answer;
+    }
+
+    public void setItemRepository(ItemRepository itemRepository) {
+        this.itemRepository = itemRepository;
     }
 
 }

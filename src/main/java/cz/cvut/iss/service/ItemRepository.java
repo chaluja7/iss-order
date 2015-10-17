@@ -17,6 +17,7 @@ public final class ItemRepository {
         ITEMS_MAPPING.put("fedora", 1l);
         ITEMS_MAPPING.put("rhel", 2l);
         ITEMS_MAPPING.put("ubuntu", 3l);
+        ITEMS_MAPPING.put("aaa", 4l);
     }
 
     public boolean containsItemWithSku(String sku) {
