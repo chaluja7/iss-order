@@ -1,5 +1,4 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:osgi="http://www.springframework.org/schema/osgi"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:camel="http://camel.apache.org/schema/spring"
        xmlns:cxf="http://camel.apache.org/schema/cxf"
@@ -9,8 +8,7 @@
          http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
          http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
          http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd
-         http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd
-         ">
+         http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd">
 
     <camel:sslContextParameters id="sslContextParametersWithoutAuthentication">
         <camel:keyManagers keyPassword="redhat">
@@ -37,12 +35,22 @@
     <bean id="exchangeProcessor" class="cz.cvut.iss.processor.ExchangeProcessor" />
     <bean id="accountingResponseException" class="cz.cvut.iss.exception.AccountingResponseException" />
 
-
     <camelContext xmlns="http://camel.apache.org/schema/spring">
 
         <!-- use Camel property placeholder loaded from the given file -->
         <propertyPlaceholder id="placeholder" location="classpath:sql.properties"/>
 
+        <!--START nase endpointy-->
+        <!--REST GET-->
+        <route id="orderRestHttpsGet">
+            <from uri="restlet:https://localhost:8081/orders/{orderId}?restletMethod=get&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
+            <setHeader headerName="isRest">
+                <constant>true</constant>
+            </setHeader>
+            <to uri="direct:find-order"/>
+        </route>
+
+        <!--REST POST-->
         <route id="orderRestHttpsPost">
             <from uri="restlet:https://localhost:8081/orders?restletMethod=post&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
 
@@ -73,135 +81,76 @@
             <to uri="direct:new-order"/>
         </route>
 
-        <route id="orderRestHttpsGet">
-            <from uri="restlet:https://localhost:8081/orders/{orderId}?restletMethod=get&amp;sslContextParameters=#sslContextParametersWithoutAuthentication" />
-            <setHeader headerName="isRest">
-                <constant>true</constant>
-            </setHeader>
-            <to uri="direct:find-order"/>
-        </route>
-
-        <route id="supplierA">
-            <from uri="direct:supplier-a" />
-
-            <!-- musim dostat orderId do property -->
-            <setProperty propertyName="orderId">
-                <simple>${header.orderid}</simple>
-            </setProperty>
-
-            <!-- pred volanim odstranim hlavicky -->
-            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
-
-            <to uri="bean:supplierAService?method=getAvailableRequest" />
-            <to uri="cxf:bean:supplier-a-ws"/>
-            <log message="response supplierA - ${body[0]}"/>
-
-            <!-- pokud je zbozi dostupne, tak se nasetuje do hlavicky supplierAItemPrice jeho cena (za kus) -->
-            <setHeader headerName="supplierAItemPrice">
-                <constant>null</constant>
-            </setHeader>
-            <log message="SupplierA item price before: ${header.supplierAItemPrice}" />
+        <!--SOAP get&create-->
+        <route id="cxf-order-ws">
+            <from uri="cxf:bean:order-ws"/>
             <choice>
                 <when>
-                    <simple>${body[0].available}</simple>
-                    <setHeader headerName="supplierAItemPrice">
-                        <simple>${body[0].price.longValue}</simple>
+                    <simple>${in.header.operationName} == 'get'</simple>
+                    <setHeader headerName="orderId">
+                        <simple>${body[0]}</simple>
                     </setHeader>
+                    <to uri="direct:find-order"/>
+                </when>
+                <when>
+                    <simple>${in.header.operationName} == 'create'</simple>
+                    <to uri="direct:new-order"/>
                 </when>
             </choice>
         </route>
+        <!--END nase endpointy-->
 
-        <route id="supplierB">
-            <from uri="direct:supplier-b" />
+        <!-- GET - najde a vratio objednavku dle id, ktere musi byt v header.orderId -->
+        <route id="find-order">
+            <from uri="direct:find-order"/>
 
-            <!-- musim dostat orderId do property -->
-            <setProperty propertyName="orderId">
-                <simple>${header.orderid}</simple>
-            </setProperty>
-
-            <!-- pred volanim odstranim hlavicky -->
-            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
-
-            <to uri="bean:supplierBService?method=getAvailableRequest" />
-            <to uri="cxf:bean:supplier-b-ws"/>
-            <log message="response supplierB - ${body[0]}"/>
-
-            <!-- pokud je zbozi dostupne, tak se nasetuje do hlavicky supplierAItemPrice jeho cena (za kus) -->
-            <setHeader headerName="supplierBItemPrice">
-                <constant>null</constant>
-            </setHeader>
-            <log message="SupplierB item price before: ${header.supplierBItemPrice}" />
-            <choice>
-                <when>
-                    <simple>${body[0].available}</simple>
-                    <setHeader headerName="supplierBItemPrice">
-                        <simple>${body[0].price.longValue}</simple>
-                    </setHeader>
-                </when>
-            </choice>
-        </route>
-
-        <route id="accounting">
-            <from uri="direct:accounting" />
-
-            <!-- vyjimky chci handlovat jen pro rest -->
+            <!-- vyjimky chci handlovat pouze pro rest -->
             <onException>
-                <exception>java.lang.Exception</exception>
+                <!--neexistujici objednavka-->
+                <exception>cz.cvut.iss.exception.NoSuchOrderException</exception>
                 <handled>
                     <simple>${header.isRest}</simple>
                 </handled>
-
-                <to uri="bean:orderStatusProvider?method=cancelCauseAccounting"/>
-
                 <setHeader headerName="CamelHttpResponseCode">
-                    <constant>500</constant>
+                    <constant>404</constant>
                 </setHeader>
                 <setBody>
                     <constant>null</constant>
                 </setBody>
             </onException>
 
-            <to uri="bean:orderRepository?method=getForAccounting" />
-            <marshal>
-                <json library="Jackson"/>
-            </marshal>
+            <onException>
+                <!--nezadal id ale nejaky pazmek-->
+                <exception>org.apache.camel.TypeConversionException</exception>
+                <handled>
+                    <simple>${header.isRest}</simple>
+                </handled>
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>400</constant>
+                </setHeader>
+                <setBody>
+                    <constant>null</constant>
+                </setBody>
+            </onException>
 
-            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
-            <setHeader headerName="CamelHttpMethod">
-                <constant>POST</constant>
-            </setHeader>
-            <setHeader headerName="Content-Type">
-                <constant>application/json</constant>
-            </setHeader>
+            <!--vytahnu order dle ID -->
+            <setProperty propertyName="orderId">
+                <simple>${header.orderId}</simple>
+            </setProperty>
+            <to uri="bean:orderRepository?method=get"/>
 
-            <to uri="https4://localhost:8443/accounting/rest/accounting/invoice/issue?sslContextParameters=#sslContextParametersWithoutAuthentication"/>
-            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
-
-            <convertBodyTo type="java.lang.String"/>
-            <unmarshal>
-                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Invoice"/>
-            </unmarshal>
-
+            <!-- pro rest chci marshallovat pomoci jacksonu -->
             <choice>
                 <when>
-                    <simple>${body.status} == 'ISSUED'</simple>
-
-                    <to uri="bean:orderStatusProvider?method=account"/>
-
-                    <setProperty propertyName="orderTotalPrice">
-                        <simple>${body.order.totalPrice}</simple>
-                    </setProperty>
-
-                    <to uri="bean:orderRepository?method=setTotalPrice"/>
+                    <simple>${header.isRest}</simple>
+                    <marshal>
+                        <json library="Jackson"/>
+                    </marshal>
                 </when>
-                <otherwise>
-                    <throwException ref="accountingResponseException" />
-                </otherwise>
             </choice>
-
-            <log message="Accounting complete - total price: ${body.order.totalPrice}" />
         </route>
 
+        <!--CREATE-->
         <route id="new-order">
             <from uri="direct:new-order" />
 
@@ -284,10 +233,10 @@
             <!--ziskam udaje o cene itemu -->
             <to uri="bean:orderRepository?method=get" />
             <!--<setProperty propertyName="orderItemsCount">-->
-                <!--<simple>${body.item.count}</simple>-->
+            <!--<simple>${body.item.count}</simple>-->
             <!--</setProperty>-->
             <!--<setProperty propertyName="itemPrice">-->
-                <!--<simple>${body.item.unitPrice}</simple>-->
+            <!--<simple>${body.item.unitPrice}</simple>-->
             <!--</setProperty>-->
             <log message="items count - ${property.itemCount}"/>
             <log message="item price - ${property.itemPrice}"/>
@@ -304,11 +253,19 @@
             <!--SUPPLIER B-->
             <to uri="direct:supplier-b"/>
             <log message="SupplierB item price after: ${header.supplierBItemPrice}" />
-
             <!--END dotazy na externi sklady-->
+
 
             <!--ACCOUNTING-->
             <to uri="direct:accounting"/>
+
+
+            <!--EXPEDITION-->
+            <transform>
+                <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
+            </transform>
+            <to uri="activemq:queue:expedition" pattern="InOnly" />
+
 
             <!--FINAL RESPONSE-->
             <removeHeaders pattern="*" excludePattern="isRest" />
@@ -332,64 +289,130 @@
                     </setBody>
                 </otherwise>
             </choice>
-
-            <transform>
-                <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
-            </transform>
-            <to uri="activemq:queue:expedition" pattern="InOnly" />
         </route>
 
-        <!-- najde a vratio objednavku dle id, ktere musi byt v header.orderId -->
-        <route id="find-order">
-            <from uri="direct:find-order"/>
+        <!--SUPPLIER A-->
+        <route id="supplierA">
+            <from uri="direct:supplier-a" />
 
-            <!-- vyjimky chci handlovat pouze pro rest -->
+            <!-- musim dostat orderId do property -->
+            <setProperty propertyName="orderId">
+                <simple>${header.orderId}</simple>
+            </setProperty>
+
+            <!-- pred volanim odstranim hlavicky -->
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+
+            <to uri="bean:supplierAService?method=getAvailableRequest" />
+            <to uri="cxf:bean:supplier-a-ws"/>
+            <log message="response supplierA - ${body[0]}"/>
+
+            <!-- pokud je zbozi dostupne, tak se nasetuje do hlavicky supplierAItemPrice jeho cena (za kus) -->
+            <setHeader headerName="supplierAItemPrice">
+                <constant>null</constant>
+            </setHeader>
+            <log message="SupplierA item price before: ${header.supplierAItemPrice}" />
+            <choice>
+                <when>
+                    <simple>${body[0].available}</simple>
+                    <setHeader headerName="supplierAItemPrice">
+                        <simple>${body[0].price.longValue}</simple>
+                    </setHeader>
+                </when>
+            </choice>
+        </route>
+
+        <!--SUPPLIER B-->
+        <route id="supplierB">
+            <from uri="direct:supplier-b" />
+
+            <!-- musim dostat orderId do property -->
+            <setProperty propertyName="orderId">
+                <simple>${header.orderId}</simple>
+            </setProperty>
+
+            <!-- pred volanim odstranim hlavicky -->
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+
+            <to uri="bean:supplierBService?method=getAvailableRequest" />
+            <to uri="cxf:bean:supplier-b-ws"/>
+            <log message="response supplierB - ${body[0]}"/>
+
+            <!-- pokud je zbozi dostupne, tak se nasetuje do hlavicky supplierAItemPrice jeho cena (za kus) -->
+            <setHeader headerName="supplierBItemPrice">
+                <constant>null</constant>
+            </setHeader>
+            <log message="SupplierB item price before: ${header.supplierBItemPrice}" />
+            <choice>
+                <when>
+                    <simple>${body[0].available}</simple>
+                    <setHeader headerName="supplierBItemPrice">
+                        <simple>${body[0].price.longValue}</simple>
+                    </setHeader>
+                </when>
+            </choice>
+        </route>
+
+        <!--ACCOUNTING-->
+        <route id="accounting">
+            <from uri="direct:accounting" />
+
+            <!-- vyjimky chci handlovat jen pro rest -->
             <onException>
-                <exception>cz.cvut.iss.exception.NoSuchOrderException</exception>
+                <exception>java.lang.Exception</exception>
                 <handled>
                     <simple>${header.isRest}</simple>
                 </handled>
+
+                <to uri="bean:orderStatusProvider?method=cancelCauseAccounting"/>
+
                 <setHeader headerName="CamelHttpResponseCode">
-                    <constant>404</constant>
+                    <constant>500</constant>
                 </setHeader>
                 <setBody>
                     <constant>null</constant>
                 </setBody>
             </onException>
 
-            <!--vytahnu order dle ID -->
-            <setProperty propertyName="orderId">
-                <simple>${header.orderId}</simple>
-            </setProperty>
-            <to uri="bean:orderRepository?method=get"/>
+            <to uri="bean:orderRepository?method=getForAccounting" />
+            <marshal>
+                <json library="Jackson"/>
+            </marshal>
 
-            <!-- pro rest chci marshallovat pomoci jacksonu -->
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+            <setHeader headerName="CamelHttpMethod">
+                <constant>POST</constant>
+            </setHeader>
+            <setHeader headerName="Content-Type">
+                <constant>application/json</constant>
+            </setHeader>
+
+            <to uri="https4://localhost:8443/accounting/rest/accounting/invoice/issue?sslContextParameters=#sslContextParametersWithoutAuthentication"/>
+            <removeHeaders pattern="*" excludePattern="orderId|isRest"/>
+
+            <convertBodyTo type="java.lang.String"/>
+            <unmarshal>
+                <json library="Jackson" unmarshalTypeName="cz.cvut.iss.model.Invoice"/>
+            </unmarshal>
+
             <choice>
                 <when>
-                    <simple>${header.isRest}</simple>
-                    <marshal>
-                        <json library="Jackson"/>
-                    </marshal>
-                </when>
-            </choice>
-        </route>
+                    <simple>${body.status} == 'ISSUED'</simple>
 
-        <route id="cxf-order-ws">
-            <from uri="cxf:bean:order-ws"/>
-            <choice>
-                <when>
-                    <simple>${in.header.operationName} == 'get'</simple>
-                    <setHeader headerName="orderId">
-                        <simple>${body[0]}</simple>
-                    </setHeader>
-                    <to uri="direct:find-order"/>
+                    <to uri="bean:orderStatusProvider?method=account"/>
+
+                    <setProperty propertyName="orderTotalPrice">
+                        <simple>${body.order.totalPrice}</simple>
+                    </setProperty>
+
+                    <to uri="bean:orderRepository?method=setTotalPrice"/>
                 </when>
-                <when>
-                    <simple>${in.header.operationName} == 'create'</simple>
-                    <to uri="direct:new-order"/>
-                </when>
+                <otherwise>
+                    <throwException ref="accountingResponseException" />
+                </otherwise>
             </choice>
 
+            <log message="Accounting complete - total price: ${body.order.totalPrice}" />
         </route>
 
         <!-- brigeEndpoint na soap sluzbu objednavka s vyuzitim sslContextParametersWithoutAuthentication -->
@@ -419,8 +442,6 @@
                      serviceName="ssp:SupplierB"
                      xmlns:ssp="http://cz.cvut.supplier/supplierBApplication/service/1"/>
 
-
-    <!--Mozne nastaveni pouziti ssl primo na cxf endpoint, bez bridgeEndpointu-->
     <http:conduit name="{http://cz.cvut.supplier/supplierAApplication/service/1}SupplierAPort.http-conduit">
         <http:tlsClientParameters disableCNCheck="true">
             <sec:trustManagers>
@@ -445,11 +466,7 @@
         </http:tlsClientParameters>
     </http:conduit>
 
-    <!--
-
-    AMQ
-        Configure the activemq component:
-      -->
+    <!-- AMQ -->
     <bean id="jmsConnectionFactory"
           class="org.apache.activemq.ActiveMQConnectionFactory">
         <property name="brokerURL" value="discovery:(fabric:masterslave)" />
@@ -474,11 +491,9 @@
           class="org.apache.activemq.camel.component.ActiveMQComponent">
         <property name="configuration" ref="jmsConfig"/>
     </bean>
-
     <!-- AMQ end -->
 
     <!-- JDBC -->
-
     <bean id="inventoryDB" class="org.apache.commons.dbcp.BasicDataSource"
           destroy-method="close">
         <property name="driverClassName" value="org.h2.Driver"/>
@@ -491,7 +506,6 @@
     <bean id="sql" class="org.apache.camel.component.sql.SqlComponent">
         <property name="dataSource" ref="inventoryDB"/>
     </bean>
-
     <!-- JDBC end -->
 
 </beans>
