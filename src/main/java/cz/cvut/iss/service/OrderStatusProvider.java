@@ -23,7 +23,7 @@ public final class OrderStatusProvider {
     }
 
     public void cancel(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
-        setStatus(orderId, RESOLUTION_CANCELLED, "Items unavailable");
+        setStatus(orderId, RESOLUTION_CANCELLED, "Items unavailable for given count or price");
     }
 
     public void cancelCauseAccounting(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {

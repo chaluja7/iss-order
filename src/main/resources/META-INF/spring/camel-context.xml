@@ -34,6 +34,7 @@
     </bean>
     <bean id="vipHeaderProcessor" class="cz.cvut.iss.processor.VipHeaderProcessor" />
     <bean id="accountingResponseException" class="cz.cvut.iss.exception.AccountingResponseException" />
+    <bean id="itemUnavailableException" class="cz.cvut.iss.exception.ItemUnavailableException" />
     <bean id="multicastKeepSupplierHeadersStrategy" class="cz.cvut.iss.processor.MulticastKeepSupplierHeadersStrategy" />
 
     <camelContext xmlns="http://camel.apache.org/schema/spring">
@@ -66,7 +67,7 @@
                     <constant>400</constant>
                 </setHeader>
                 <setBody>
-                    <constant>null</constant>
+                    <simple>null</simple>
                 </setBody>
             </onException>
 
@@ -116,7 +117,7 @@
                     <constant>404</constant>
                 </setHeader>
                 <setBody>
-                    <constant>null</constant>
+                    <simple>null</simple>
                 </setBody>
             </onException>
 
@@ -130,7 +131,7 @@
                     <constant>400</constant>
                 </setHeader>
                 <setBody>
-                    <constant>null</constant>
+                    <simple>null</simple>
                 </setBody>
             </onException>
 
@@ -166,7 +167,22 @@
                     <constant>400</constant>
                 </setHeader>
                 <setBody>
-                    <constant>null</constant>
+                    <simple>null</simple>
+                </setBody>
+            </onException>
+
+            <onException>
+                <exception>cz.cvut.iss.exception.ItemUnavailableException</exception>
+                <handled>
+                    <simple>${header.isRest}</simple>
+                </handled>
+
+                <to uri="bean:orderStatusProvider?method=cancel" />
+                <setHeader headerName="CamelHttpResponseCode">
+                    <constant>403</constant>
+                </setHeader>
+                <setBody>
+                    <simple>null</simple>
                 </setBody>
             </onException>
 
@@ -177,7 +193,17 @@
                     <bean ref="vipHeaderProcessor" method="process"/>
                 </when>
             </choice>
-            <log message="VIP: ${header.X-Els-Vip}"/>
+            <setProperty propertyName="X-Els-Vip">
+                <simple>${header.X-Els-Vip}</simple>
+            </setProperty>
+            <when>
+                <simple>${property.X-Els-Vip} == null</simple>
+
+                <setProperty propertyName="X-Els-Vip">
+                    <constant>false</constant>
+                </setProperty>
+            </when>
+            <log message="VIP: ${property.X-Els-Vip}"/>
 
             <!-- vytvorim objednavku a nastavim propertu property.orderId - Id nove vytvorene objednavky -->
             <to uri="bean:orderRepository?method=create" />
@@ -194,10 +220,10 @@
             <setProperty propertyName="itemId">
                 <simple>${body.item.sku}</simple>
             </setProperty>
-            <setProperty propertyName="itemCount">
+            <setProperty propertyName="orderedItemCount">
                 <simple>${body.item.count}</simple>
             </setProperty>
-            <setProperty propertyName="itemPrice">
+            <setProperty propertyName="orderedItemPrice">
                 <simple>${body.item.unitPrice}</simple>
             </setProperty>
             <!-- vygeneruje Map pro DB query -->
@@ -214,9 +240,12 @@
             <choice>
                 <when>
                     <!-- dostupna OrderItem z DB i vcetne poctu -->
-                    <simple>${body} != '[]' &amp;&amp; ${body[0].count} &gt;= ${property.itemCount}</simple>
+                    <simple>${body} != '[]' &amp;&amp; ${body[0].count} &gt;= ${property.orderedItemCount}</simple>
                     <setProperty propertyName="itemAvailableInLocalStore">
                         <constant>true</constant>
+                    </setProperty>
+                    <setProperty propertyName="localPricePerItem">
+                        <simple>${body[0].unitPrice}</simple>
                     </setProperty>
                     <log message="DB item: ${body[0].sku}, ${body[0].unitPrice}, ${body[0].count} is in DB in sufficient count"/>
                 </when>
@@ -227,8 +256,8 @@
             </choice>
             <!-- JDBC end -->
             <log message="Item available locally - ${property.itemAvailableInLocalStore}"/>
-            <log message="items count - ${property.itemCount}"/>
-            <log message="item price - ${property.itemPrice}"/>
+            <log message="items count - ${property.orderedItemCount}"/>
+            <log message="item price - ${property.orderedItemPrice}"/>
 
             <!-- musim nastavit orderId do headeru, aby se propagovalo -->
             <setHeader headerName="orderId">
@@ -254,8 +283,15 @@
                         <to uri="direct:supplier-b"/>
                     </multicast>
 
-                    <log message="SupplierA item price after: ${header.supplierAItemPrice}" />
-                    <log message="SupplierB item price after: ${header.supplierBItemPrice}" />
+                    <setProperty propertyName="supplierAItemPrice">
+                        <simple>${header.supplierAItemPrice}</simple>
+                    </setProperty>
+                    <setProperty propertyName="supplierBItemPrice">
+                        <simple>${header.supplierBItemPrice}</simple>
+                    </setProperty>
+
+                    <log message="SupplierA item price after: ${property.supplierAItemPrice}" />
+                    <log message="SupplierB item price after: ${property.supplierBItemPrice}" />
                 </when>
                 <otherwise>
                     <log message="NO NEED to contact external stores"/>
@@ -265,8 +301,70 @@
 
 
             <!--START LOGIKA prodani-->
+            <setProperty propertyName="finalPricePerItem">
+                <simple>null</simple>
+            </setProperty>
+            <choice>
+                <when>
+                    <simple>${property.itemAvailableInLocalStore}</simple>
 
+                    <log message="FINAL price is LOCAL - ${property.localPricePerItem}"/>
+                    <setProperty propertyName="finalPricePerItem">
+                        <simple>${property.localPricePerItem}</simple>
+                    </setProperty>
+                </when>
+                <when>
+                    <simple>${property.supplierAItemPrice} != null &amp;&amp; ${property.supplierBItemPrice} != null</simple>
 
+                    <choice>
+                        <when>
+                            <simple>${property.supplierAItemPrice} &lt;= ${property.supplierBItemPrice}</simple>
+
+                            <log message="FINAL price is SUPPLIERsA - ${property.supplierAItemPrice}"/>
+                            <setProperty propertyName="finalPricePerItem">
+                                <simple>${property.supplierAItemPrice}</simple>
+                            </setProperty>
+                        </when>
+                        <otherwise>
+                            <log message="FINAL price is SUPPLIERsB - ${property.supplierBItemPrice}"/>
+                            <setProperty propertyName="finalPricePerItem">
+                                <simple>${property.supplierBItemPrice}</simple>
+                            </setProperty>
+                        </otherwise>
+                    </choice>
+                </when>
+                <when>
+                    <simple>${property.supplierAItemPrice} != null</simple>
+
+                    <log message="FINAL price is SUPPLIERsA - ${property.supplierAItemPrice}"/>
+                    <setProperty propertyName="finalPricePerItem">
+                        <simple>${property.supplierAItemPrice}</simple>
+                    </setProperty>
+                </when>
+                <when>
+                    <simple>${property.supplierBItemPrice} != null</simple>
+
+                    <log message="FINAL price is SUPPLIERsB - ${property.supplierBItemPrice}"/>
+                    <setProperty propertyName="finalPricePerItem">
+                        <simple>${property.supplierBItemPrice}</simple>
+                    </setProperty>
+                </when>
+            </choice>
+
+            <log message="FINAL PRICE - ${property.finalPricePerItem}"/>
+            <!--nedostupne zbozi-->
+            <when>
+                <simple>${property.finalPricePerItem} == null</simple>
+
+                <throwException ref="itemUnavailableException" />
+            </when>
+
+            <!--mame to pouze drazsi, nez si to typek objednal - pro VIP to nechame projit-->
+            <when>
+                <simple>${property.finalPricePerItem} &gt; ${property.orderedItemPrice} &amp;&amp; ${property.X-Els-Vip} == false</simple>
+
+                <throwException ref="itemUnavailableException" />
+            </when>
             <!--END LOGIKA prodani-->
 
 
@@ -280,6 +378,7 @@
             </transform>
             <to uri="activemq:queue:expedition" pattern="InOnly" />
 
+            <!--TODO snizeni stavu skladu-->
             <!--SNIZENI STAVU zasob na skladu, pokud byla polozka lokalne k dispozici-->
             <!-- decrementuje count u vyrobku o :count -->
             <!--<to uri="sql:{{sql.decrementCountForSKU}}"/>-->
@@ -299,7 +398,7 @@
                         <simple>/orders/${property.orderId}</simple>
                     </setHeader>
                     <setBody>
-                        <constant>null</constant>
+                        <simple>null</simple>
                     </setBody>
                 </when>
                 <otherwise>
@@ -398,7 +497,7 @@
                     <constant>500</constant>
                 </setHeader>
                 <setBody>
-                    <constant>null</constant>
+                    <simple>null</simple>
                 </setBody>
             </onException>
 
