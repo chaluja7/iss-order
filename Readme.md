@@ -21,7 +21,7 @@
 
   ``fabric:create``
 
-* Vytvoříme 2 kontejnery v MasterSlave topologii s persistentním uložištěm a skupinou 'masterslave' pro A-MQ. $PERSISTENT_STORAGE$ musí být složka existujici na filesystému (např. /Users/jakubchalupa/Documents/iss-amq).
+* Vytvoříme 2 kontejnery v MasterSlave topologii s persistentním uložištěm a skupinou 'masterslave' pro A-MQ. ``$PERSISTENT_STORAGE$`` musí být složka existujici na filesystému (např. ``/Users/jakubchalupa/Documents/iss-amq``).
 
   ``mq-create --create-container broker --replicas 2 --data $PERSISTENT_STORAGE$ --group masterslave hq-broker``
 
@@ -33,7 +33,7 @@
 
   ``fabric:profile-edit --feature iss-order fabric``
   
-* Zkontrolujeme, zda se správně nainstaloval a nastartoval bundle ``cz.cvut.iss.iss-order``:
+* Zkontrolujeme, zda se správně nainstaloval a nastartoval bundle ``cz.cvut.iss.iss-order``.
 
   ``list -s``
   
