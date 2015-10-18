@@ -192,7 +192,7 @@
                     <simple>${header.isRest}</simple>
                 </handled>
 
-                <to uri="bean:orderStatusProvider?method=cancel" />
+                <to uri="bean:orderStatusProvider?method=cancelCauseError" />
                 <setHeader headerName="CamelHttpResponseCode">
                     <constant>500</constant>
                 </setHeader>
@@ -405,6 +405,9 @@
                 <!-- decrementuje count u vyrobku o :count -->
                 <to uri="sql:{{sql.decrementCountForSKU}}"/>
             </when>
+
+            <!--finalni potvrzeni objednavky-->
+            <to uri="bean:orderStatusProvider?method=confirm" />
 
             <!--FINAL RESPONSE-->
             <choice>

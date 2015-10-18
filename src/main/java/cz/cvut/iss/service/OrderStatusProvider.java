@@ -30,6 +30,10 @@ public final class OrderStatusProvider {
         setStatus(orderId, RESOLUTION_CANCELLED, "Error while contacting accounting");
     }
 
+    public void cancelCauseError(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
+        setStatus(orderId, RESOLUTION_CANCELLED, "Order was cancelled because of internal server error");
+    }
+
     public void account(@ExchangeProperty("orderId") long orderId) throws NoSuchOrderException {
         setStatus(orderId, RESOLUTION_ACCOUNTED, "The order is accounted");
     }
