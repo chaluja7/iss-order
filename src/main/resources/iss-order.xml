@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<features name="get-started">
+<features name="iss-order">
     <feature name="iss-order">
         <bundle>mvn:commons-dbcp/commons-dbcp/1.4</bundle>
         <bundle>mvn:org.osgi/org.osgi.service.jdbc/1.0.0</bundle>

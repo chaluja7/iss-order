@@ -187,6 +187,13 @@
             </onException>
 
             <onException>
+                <exception>org.springframework.jms.UncategorizedJmsException</exception>
+                <continued>
+                    <constant>true</constant>
+                </continued>
+            </onException>
+
+            <onException>
                 <exception>java.lang.Exception</exception>
                 <handled>
                     <simple>${header.isRest}</simple>
@@ -389,7 +396,7 @@
 
             <!--EXPEDITION-->
             <transform>
-                <simple>Order with id='${property.orderId}' was sent to expedition.</simple>
+                <simple>ORDER: id: ${property.orderId}; item: '${property.itemId}'; count: ${property.orderedItemCount}; unitPrice: ${property.orderedItemPrice}</simple>
             </transform>
             <to uri="activemq:queue:expedition" pattern="InOnly" />
 
@@ -523,6 +530,11 @@
                     <simple>null</simple>
                 </setBody>
             </onException>
+
+            <!-- musim dostat orderId do property -->
+            <setProperty propertyName="orderId">
+                <simple>${header.orderId}</simple>
+            </setProperty>
 
             <to uri="bean:orderRepository?method=getForAccounting" />
             <marshal>

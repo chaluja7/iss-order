@@ -74,6 +74,10 @@
             <artifactId>camel-http4</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jetty</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
@@ -109,13 +113,11 @@
             <artifactId>commons-dbcp</artifactId>
             <version>1.4</version>
         </dependency>
-
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>1.3.173</version>
         </dependency>
-
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.jdbc</artifactId>
@@ -127,8 +129,27 @@
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-sql</artifactId>
         </dependency>
-
         <!-- JDBC end -->
+
+        <!-- testing -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test-spring</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--dependency nutna pro testy cxf (ale spis to jen neumim spravne nastavit :)-->
+        <dependency>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-rt-transports-http-jetty</artifactId>
+            <version>2.7.6</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
@@ -182,7 +203,7 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>cz.cvut.iss*</Export-Package>
-                        <Import-Package>org.h2,*</Import-Package>
+                        <Import-Package>org.h2,org.springframework.jms,*</Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

@@ -17,7 +17,7 @@ public final class OrderRepository implements OrderService {
 
     private ItemRepository itemRepository;
 
-    private static final Map<Long, ResolvedOrder> ORDERS = new TreeMap<>();
+    private static final TreeMap<Long, ResolvedOrder> ORDERS = new TreeMap<>();
 
     private static AtomicLong atomicLong = new AtomicLong(0);
 
@@ -41,12 +41,20 @@ public final class OrderRepository implements OrderService {
     }
 
     @Override
-    public ResolvedOrder get(@ExchangeProperty("orderId") long id) throws NoSuchOrderException{
+    public ResolvedOrder get(@ExchangeProperty("orderId") long id) throws NoSuchOrderException {
         if(ORDERS.containsKey(id)) {
             return ORDERS.get(id);
         }
 
         throw new NoSuchOrderException(id);
+    }
+
+    public ResolvedOrder getLastOrder() {
+        if(!ORDERS.isEmpty()) {
+            return ORDERS.lastEntry().getValue();
+        }
+
+        return null;
     }
 
     /**

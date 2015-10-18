@@ -5,7 +5,7 @@
 ###ISS-ORDER###
 * nainstalujeme projekt s profilem bundle do lokálního maven repozitáře
 
-  ``mvn clean install -P bundle``
+  ``mvn clean install -DskipTests -P bundle``
 
 ###FUSE###
 * odkomentovat poslední řádek v ``$FUSE_HOME$/etc/users.properties`` (uživatel admin)
