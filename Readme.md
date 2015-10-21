@@ -95,3 +95,6 @@
 * Auth basic
 * user:m password:m - manager - POST /orders and GET /orders/{id}
 * user:e password:e - employee - only GET /orders/{id}
+
+##ISS-Order docker##
+* run: ``docker run -it --net="host" -p 8181:8181 -p 8081:8081 -p 9181:9181 udrzalv/iss-order``
