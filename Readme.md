@@ -37,6 +37,13 @@
 
   ``list -s``
   
+* Při vypnutí a opětovném puštění FUSE bude možná třeba nastartovat znovu child-instance A-MQ.
+
+    ``$FUSE_HOME$/bin/client container-start  broker``
+    
+    ``$FUSE_HOME$/bin/client container-start  broker2``
+  
+  
 ##Endpointy##
 
 ###REST###
