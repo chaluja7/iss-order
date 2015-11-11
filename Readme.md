@@ -94,15 +94,15 @@ Docker image obsahující apiman i instanci JBOSS FUSE.
 
 ###REST###
 *  endpoint: ``https://localhost:5443/apiman-gateway/iss/orders/2.3/orders``
-*  premium api key: ``f16d6cc3-1b93-4521-8fe9-b1b635a4d08f``
-*  high-volume api key: ``656b9895-47cb-46d6-8323-2b6684793a88``
-*  low-volume api key: ``a24db9ad-c0c2-4332-bf07-211288dd2fbf``
+*  premium api key: ``25187ed3-dee4-4715-9bf1-b7da7eb83059``
+*  high-volume api key: ``179bf251-52d1-4663-b0ab-dc72c28c97d0``
+*  low-volume api key: ``aa4758cd-e53e-4645-b16d-d9caccfe51c0``
 
 ###SOAP###
-* endpoint: ``https://localhost:5443/apiman-gateway/iss/orders/2.3.3_soap/orders``
-* premium api key: ``f16d6cc3-1b93-4521-8fe9-b1b635a4d08f``
-* high-volume api key: ``5d7bd3af-7da6-4d36-ba7e-111e7e4e479f`` 
-* low-volume api key: ``89c4c433-b77f-4922-bffd-d9e3476d9264``
+* endpoint: ``https://localhost:5443/apiman-gateway/iss/orders/2.3.4_soap/orders``
+* premium api key: ``32864e58-f468-4e62-8594-361bc34b6fef``
+* high-volume api key: ``833e0e59-64af-464b-9511-a6e013c784fb`` 
+* low-volume api key: ``e570df56-a90a-4433-a505-1700f3df9fd5``
 
 ###Users###
 * Auth basic
