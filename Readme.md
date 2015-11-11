@@ -1,4 +1,10 @@
 # A4M36ISS - Order service #
+##ISS-Order - final docker##
+Docker image obsahující apiman i camel.
+* run: ``docker run -it --net="host" -p 8181:8181 -p 5080:5080 -p 5443:5443 -p 5990:5990 -p 5993:5993 udrzalv/iss-order-all``
+* :8181 - hawtio
+* :5080/apiman - apiman konzole
+* :5443 - rest/soap apiman endpoints (viz. dole)
 
 ##Příprava a spuštění projektu##
 
@@ -104,4 +110,5 @@
 * user:e password:e - employee - only GET /orders/{id}
 
 ##ISS-Order docker##
+Docker pouze s camelem
 * run: ``docker run -it --net="host" -p 8181:8181 -p 8081:8081 -p 9181:9181 udrzalv/iss-order``
