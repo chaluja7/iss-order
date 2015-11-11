@@ -1,0 +1,180 @@
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:tns="urn:cz.cvut.iss:order" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:ns1="urn:cz.cvut.iss:order" name="OrderService"
+                  targetNamespace="urn:cz.cvut.iss:order">
+
+    <wsdl:types>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="urn:cz.cvut.iss:order"
+                   attributeFormDefault="unqualified" elementFormDefault="unqualified"
+                   targetNamespace="urn:cz.cvut.iss:order">
+            <xs:element name="create" type="tns:create"/>
+            <xs:element name="createResponse" type="tns:createResponse"/>
+            <xs:element name="get" type="tns:get"/>
+            <xs:element name="getResponse" type="tns:getResponse"/>
+            <xs:element name="resolvedOrder" type="tns:resolvedOrder"/>
+            <xs:complexType name="create">
+                <xs:sequence>
+                    <xs:element name="order" type="tns:order"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="order">
+                <xs:sequence>
+                    <xs:element name="address" type="tns:address"/>
+                    <xs:element name="item" type="tns:orderItem"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="address">
+                <xs:sequence>
+                    <xs:element name="firstName" type="xs:string"/>
+                    <xs:element name="lastName" type="xs:string"/>
+                    <xs:element name="street" type="xs:string"/>
+                    <xs:element name="city" type="xs:string"/>
+                    <xs:element name="zipCode" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="orderItem">
+                <xs:sequence>
+                    <xs:element name="sku" type="xs:string"/>
+                    <xs:element name="count" type="xs:int"/>
+                    <xs:element name="unitPrice" type="xs:double"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="createResponse">
+                <xs:sequence>
+                    <xs:element name="orderId" type="xs:long"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="get">
+                <xs:sequence>
+                    <xs:element name="orderId" type="xs:long"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="getResponse">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="order" type="tns:resolvedOrder"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="resolvedOrder">
+                <xs:complexContent>
+                    <xs:extension base="tns:order">
+                        <xs:sequence>
+                            <xs:element minOccurs="0" name="id" type="xs:long"/>
+                            <xs:element minOccurs="0" name="totalPrice" type="xs:long"/>
+                            <xs:element minOccurs="0" name="status" type="tns:orderStatus"/>
+                        </xs:sequence>
+                    </xs:extension>
+                </xs:complexContent>
+            </xs:complexType>
+            <xs:complexType name="orderStatus">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="resolution" type="xs:string"/>
+                    <xs:element minOccurs="0" name="description" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:element name="BadOrderBodyException" type="tns:BadOrderBodyException"/>
+            <xs:complexType name="BadOrderBodyException">
+                <xs:sequence>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="classContext" type="xs:string"/>
+                    <xs:element minOccurs="0" name="message" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:element name="NoSuchItemException" type="tns:NoSuchItemException"/>
+            <xs:complexType name="NoSuchItemException">
+                <xs:sequence>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="classContext" type="xs:string"/>
+                    <xs:element minOccurs="0" name="message" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:element name="NoSuchOrderException" type="tns:NoSuchOrderException"/>
+            <xs:complexType name="NoSuchOrderException">
+                <xs:sequence>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="classContext" type="xs:string"/>
+                    <xs:element minOccurs="0" name="message" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>
+    </wsdl:types>
+    <wsdl:message name="BadOrderBodyException">
+        <wsdl:part element="ns1:BadOrderBodyException" name="BadOrderBodyException">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="NoSuchOrderException">
+        <wsdl:part element="ns1:NoSuchOrderException" name="NoSuchOrderException">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="get">
+        <wsdl:part element="ns1:get" name="parameters">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="getResponse">
+        <wsdl:part element="ns1:getResponse" name="parameters">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="create">
+        <wsdl:part element="ns1:create" name="parameters">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="createResponse">
+        <wsdl:part element="ns1:createResponse" name="parameters">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="NoSuchItemException">
+        <wsdl:part element="ns1:NoSuchItemException" name="NoSuchItemException">
+        </wsdl:part>
+    </wsdl:message>
+    <wsdl:portType name="Order">
+        <wsdl:operation name="create">
+            <wsdl:input message="ns1:create" name="create">
+            </wsdl:input>
+            <wsdl:output message="ns1:createResponse" name="createResponse">
+            </wsdl:output>
+            <wsdl:fault message="ns1:BadOrderBodyException" name="BadOrderBodyException">
+            </wsdl:fault>
+            <wsdl:fault message="ns1:NoSuchItemException" name="NoSuchItemException">
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="get">
+            <wsdl:input message="ns1:get" name="get">
+            </wsdl:input>
+            <wsdl:output message="ns1:getResponse" name="getResponse">
+            </wsdl:output>
+            <wsdl:fault message="ns1:NoSuchOrderException" name="NoSuchOrderException">
+            </wsdl:fault>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="OrderServiceSoapBinding" type="ns1:Order">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="create">
+            <soap:operation soapAction="" style="document"/>
+            <wsdl:input name="create">
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output name="createResponse">
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="BadOrderBodyException">
+                <soap:fault name="BadOrderBodyException" use="literal"/>
+            </wsdl:fault>
+            <wsdl:fault name="NoSuchItemException">
+                <soap:fault name="NoSuchItemException" use="literal"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="get">
+            <soap:operation soapAction="" style="document"/>
+            <wsdl:input name="get">
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output name="getResponse">
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="NoSuchOrderException">
+                <soap:fault name="NoSuchOrderException" use="literal"/>
+            </wsdl:fault>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:service name="OrderService">
+        <wsdl:port binding="tns:OrderServiceSoapBinding" name="OrderServicePort">
+            <soap:address location="https://localhost:5443/apiman-gateway/iss/orders/2.3.4_soap/orders"/>
+        </wsdl:port>
+    </wsdl:service>
+</wsdl:definitions>
